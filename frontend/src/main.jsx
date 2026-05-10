@@ -12,11 +12,14 @@ import Layout from "./layouts/Layout";
 import Home from "./components/Home";
 import AnalyticsLayout from "./layouts/AnalyticsLayout";
 import ClusterAnalysis from "./components/ClusterAnalysis";
+import Login from "./components/Login";
+import { AuthProvider } from "./contexts/AuthContext";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route path="/" element={<Layout />}>
       <Route index element={<Home/>} />
+      <Route path="login" element={<Login />} />
       <Route path=":store" element={<AnalyticsLayout />}>
         <Route index element={<PredictionChart />} />
       </Route>
@@ -27,6 +30,16 @@ const router = createBrowserRouter(
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
+  </StrictMode>
+);
+
+createRoot(document.getElementById("root")).render(
+  <StrictMode>
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
   </StrictMode>
 );

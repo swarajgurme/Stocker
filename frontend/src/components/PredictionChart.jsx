@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { Line } from "react-chartjs-2";
 import {
@@ -12,6 +12,7 @@ import {
   Legend,
   Filler,
 } from "chart.js";
+import { forecastAPI, STORES } from "../services/apiClient";
 
 ChartJS.register(
   CategoryScale,
@@ -29,41 +30,52 @@ export default function PredictionChart() {
   const { store } = useParams();
 
   const [forecastData, setForecastData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [selectedInterval, setSelectedInterval] = useState("weekly");
   const [showPredicted, setShowPredicted] = useState(true);
   const [showMin, setShowMin] = useState(true);
   const [showMax, setShowMax] = useState(true);
 
   const product = searchParams.get("product") || "None";
-  const startDate = searchParams.get("startDate") || "Not selected";
-  const endDate = searchParams.get("endDate") || "Not selected";
+  const startDate = searchParams.get("startDate") || "";
+  const endDate = searchParams.get("endDate") || "";
 
-  useEffect(() => {
-    if (!product || product === "None") return;
-
-    async function fetchForecast() {
-      try {
-        const response = await fetch("http://127.0.0.1:5000/forecast", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            store_id: store,
-            product_name: product,
-            start_date: startDate,
-            end_date: endDate,
-          }),
-        });
-
-        if (!response.ok) throw new Error("Failed to fetch forecast data");
-        const result = await response.json();
-        setForecastData(result);
-      } catch (error) {
-        console.error("Error fetching forecast:", error);
-      }
+  const fetchForecast = useCallback(async () => {
+    if (!product || product === "None" || !startDate || !endDate) {
+      setForecastData(null);
+      return;
     }
 
-    fetchForecast();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await forecastAPI.generate({
+        store_id: store,
+        product_name: product,
+        start_date: startDate,
+        end_date: endDate,
+        horizon_days: 365,
+        model_type: "prophet"
+      });
+
+      setForecastData({
+        store_id: store,
+        product_name: product,
+        ...result.data
+      });
+    } catch (err) {
+      console.error("Forecast error:", err);
+      setError(err.message || "Failed to load forecast");
+    } finally {
+      setLoading(false);
+    }
   }, [store, product, startDate, endDate]);
+
+  useEffect(() => {
+    fetchForecast();
+  }, [fetchForecast]);
 
   const filterDates = (allDates, interval) => {
     if (!allDates || allDates.length === 0) return [];
@@ -234,6 +246,48 @@ export default function PredictionChart() {
   };
 
   const futureUnits = calculateFutureUnits();
+
+  // Render loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#31837A] mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading forecast...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Render error
+  if (error) {
+    return (
+      <div className="p-6 bg-red-50 border border-red-200 rounded-xl">
+        <div className="flex items-center">
+          <svg className="w-6 h-6 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <h3 className="text-lg font-semibold text-red-800">Error Loading Forecast</h3>
+        </div>
+        <p className="mt-2 text-red-700">{error}</p>
+        <button
+          onClick={fetchForecast}
+          className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200 transition"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  // Render no data yet
+  if (!forecastData || !product || product === "None") {
+    return (
+      <div className="m-4 p-6 rounded-xl bg-gray-100 border border-gray-200 text-center">
+        <p className="text-gray-500">Select a store and product to view forecast</p>
+      </div>
+    );
+  }
 
 
   return (

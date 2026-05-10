@@ -9,3 +9,38 @@ pytz==2024.1
 typing-extensions==4.10.0
 pytest==7.4.3
 pytest-cov==4.1.0
+
+# Database
+psycopg2-binary==2.9.9
+SQLAlchemy==2.0.30
+alembic==1.13.1
+
+# Authentication & Security
+PyJWT==2.8.0
+bcrypt==4.1.2
+passlib==1.7.4
+
+# Statistics & ML
+scipy==1.11.4  # For statistical anomaly detection (z-score, IQR)
+statsmodels==0.14.1  # For ARIMA
+xgboost==2.0.3  # XGBoost regression
+tensorflow==2.16.1  # For LSTM (optional, heavy)
+
+# Reporting
+ReportLab==4.0.7  # PDF generation
+openpyxl==3.1.5  # Excel generation
+xlsxwriter==3.2.0  # Excel alternative
+WeasyPrint==62.3  # HTML-to-PDF
+
+# Caching
+redis==5.0.3
+
+# Task Queue (future)
+celery==5.3.6
+kombu==5.4.0
+
+# Monitoring (future)
+prometheus-client==0.19.0
+
+# Utilities
+python-dateutil==2.9.0.post0
