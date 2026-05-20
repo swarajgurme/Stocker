@@ -34,6 +34,26 @@ python server.py
 
 The server will run on `http://localhost:5000` by default.
 
+## Bulk data seeding
+
+Populate PostgreSQL with realistic demo data for dashboards, analytics, and forecasting:
+
+```bash
+# From backend/ with venv active and DATABASE_URL set in .env
+python scripts/seed_bulk_data.py --replace --count 10000
+```
+
+**What gets created**
+
+- 5 stores (S001–S005), 20 automotive products
+- 10,000 sales rows (batch inserted, unique store/product/date)
+- 100 inventory levels, alerts, 24 completed forecasts, 80 anomalies, 60 recommendations, 25 clusters
+- 4 demo users + audit logs
+
+**Options:** `--replace` (reset transactional tables), `--count`, `--seed`, `--demo-password`, `--span-days`
+
+**Rerun anytime:** Same command with `--replace` for a fresh dataset.
+
 ## API Endpoints
 
 ### 1. Sales Forecast

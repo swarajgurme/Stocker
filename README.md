@@ -33,6 +33,27 @@ CDK/
 └── README.md                  # This file
 ```
 
+## 🌱 Database seeding (10,000 demo records)
+
+After PostgreSQL is running and `.env` is configured (`DATABASE_URL`, optional `STOCKER_BOOTSTRAP_ADMIN_PASSWORD` for `init_db.py`):
+
+```bash
+cd backend
+source venv/bin/activate   # if using a venv
+python scripts/seed_bulk_data.py --replace --count 10000
+```
+
+This seeds **10,000 sales** plus stores, products, inventory levels, forecasts, anomalies, recommendations, clusters, demo users, and audit logs. Use `--replace` to wipe transactional data and rebuild a clean dataset; omit it to append only when below the target count.
+
+| Flag | Description |
+|------|-------------|
+| `--count N` | Target sales rows (default: 10000) |
+| `--replace` | Clear sales/forecasts/inventory/etc. before seeding |
+| `--seed 42` | RNG seed for reproducible data |
+| `--demo-password` | Password for demo users (default: `DemoPass123!`) |
+
+Demo logins (after seed): `analyst@stocker.demo`, `planner@stocker.demo`, `manager@stocker.demo`, `exec@stocker.demo` with the demo password above.
+
 ## 🚀 Quick Start
 
 ### Backend Setup
