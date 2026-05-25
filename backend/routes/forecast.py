@@ -30,6 +30,13 @@ config = get_config()
 forecast_bp = Blueprint('forecast', __name__)
 
 
+def _round_metric(value: Any) -> Optional[float]:
+    """Round numeric metrics; MAPE may be None when evaluation has no valid baseline."""
+    if value is None:
+        return None
+    return round(float(value), 4)
+
+
 # ============= GENERATE FORECAST =============
 @forecast_bp.route('/generate', methods=['POST'])
 @require_role(
@@ -113,16 +120,17 @@ def generate_forecast():
         start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
         end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
 
-        # Determine model type
-        if model_type_str == 'auto':
-            model_type = ForecastModelType.PROPHET  # Default; can implement auto-selection logic
-        else:
-            try:
-                model_type = ForecastModelType(model_type_str)
-            except ValueError:
-                model_type = ForecastModelType.PROPHET
+        allowed = frozenset({"prophet", "arima", "xgboost", "auto"})
+        if model_type_str == "lstm":
+            return jsonify({
+                "status": "error",
+                "error": "LSTM is not enabled in this deployment.",
+                "code": "MODEL_NOT_AVAILABLE",
+            }), 400
+        if model_type_str not in allowed:
+            model_type_str = "prophet"
 
-        # Get store and product from DB
+        # Get store and product from DB (keep PKs — session closes before ML runs)
         with get_db_session() as db:
             store = db.query(Store).filter_by(store_code=store_id, is_active=True).first()
             product = db.query(Product).filter_by(name=product_name, is_active=True).first()
@@ -134,11 +142,14 @@ def generate_forecast():
                     "code": "NOT_FOUND"
                 }), 404
 
+            store_pk = store.id
+            product_pk = product.id
+
             # Fetch historical sales
             sales_query = db.query(Sale).filter(
                 and_(
-                    Sale.store_id == store.id,
-                    Sale.product_id == product.id,
+                    Sale.store_id == store_pk,
+                    Sale.product_id == product_pk,
                     Sale.sale_date >= start_date - timedelta(days=365),  # Include prior year for context
                     Sale.sale_date <= end_date
                 )
@@ -161,27 +172,40 @@ def generate_forecast():
                 'revenue': s.revenue
             } for s in sales])
 
-        # Train forecast model
-        forecaster = ForecastService(model_type=model_type)
-        forecast_result = forecaster.train_and_forecast(
-            df=df,
-            horizon_days=horizon_days,
-            confidence_interval=config.CONFIDENCE_INTERVAL
-        )
+        try:
+            forecaster = ForecastService()
+            forecast_result = forecaster.train_and_forecast(
+                df=df,
+                horizon_days=horizon_days,
+                confidence_interval=config.CONFIDENCE_INTERVAL,
+                model_type=model_type_str,
+            )
+        except ValueError as e:
+            return jsonify({
+                "status": "error",
+                "error": str(e),
+                "code": "MODEL_ERROR",
+            }), 400
+
+        used_model = forecast_result.get("model_type", "prophet")
+        try:
+            persisted_model_type = ForecastModelType(used_model)
+        except ValueError:
+            persisted_model_type = ForecastModelType.PROPHET
 
         # Create forecast record in DB
         with get_db_session() as db:
             forecast = Forecast(
-                store_id=store.id,
-                product_id=product.id,
-                model_type=model_type,
+                store_id=store_pk,
+                product_id=product_pk,
+                model_type=persisted_model_type,
                 horizon_days=horizon_days,
                 start_date=start_date,
                 end_date=end_date,
                 status='completed',
-                rmse=forecast_result['metrics']['rmse'],
-                mae=forecast_result['metrics']['mae'],
-                mape=forecast_result['metrics']['mape'],
+                rmse=_round_metric(forecast_result['metrics'].get('rmse')),
+                mae=_round_metric(forecast_result['metrics'].get('mae')),
+                mape=_round_metric(forecast_result['metrics'].get('mape')),
                 completed_at=datetime.utcnow()
             )
             db.add(forecast)
@@ -211,7 +235,7 @@ def generate_forecast():
             details={
                 "store_id": store_id,
                 "product": product_name,
-                "model": model_type.value,
+                "model": persisted_model_type.value,
                 "horizon_days": horizon_days,
                 "rmse": forecast_result['metrics']['rmse']
             }
@@ -226,12 +250,12 @@ def generate_forecast():
                 "forecast_id": forecast_id,
                 "store_id": store_id,
                 "product_name": product_name,
-                "model_type": model_type.value,
+                "model_type": persisted_model_type.value,
                 "forecast": forecast_result['forecast'],
                 "metrics": {
-                    "rmse": round(forecast_result['metrics']['rmse'], 4),
-                    "mae": round(forecast_result['metrics']['mae'], 4),
-                    "mape": round(forecast_result['metrics']['mape'], 4)
+                    "rmse": _round_metric(forecast_result['metrics'].get('rmse')),
+                    "mae": _round_metric(forecast_result['metrics'].get('mae')),
+                    "mape": _round_metric(forecast_result['metrics'].get('mape')),
                 },
                 "execution_time_seconds": round(execution_time, 2)
             },
@@ -340,6 +364,7 @@ def get_forecast(forecast_id: int):
 
 
 # ============= LIST FORECASTS =============
+@forecast_bp.route('/history', methods=['GET'])
 @forecast_bp.route('', methods=['GET'])
 @require_role(
     UserRole.ADMIN,
