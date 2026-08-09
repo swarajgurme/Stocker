@@ -114,6 +114,50 @@ class InventoryService:
             logger.error(f"ROP calculation error: {str(e)}")
             raise
 
+    def calculate_eoq(
+        self,
+        product_id: int,
+        annual_demand: Optional[float] = None
+    ) -> Dict:
+        """
+        Calculate Economic Order Quantity (EOQ)
+
+        EOQ = sqrt((2 * D * S) / H)
+        where:
+        D = Annual Demand
+        S = Ordering Cost per PO
+        H = Holding Cost per unit per year
+        """
+        import math
+        product = self.db.query(Product).get(product_id)
+        if not product:
+            raise ValueError(f"Product with id {product_id} not found")
+
+        # If annual_demand not supplied, calculate from last 365 days of sales
+        if annual_demand is None or annual_demand <= 0:
+            cutoff = datetime.utcnow().date() - timedelta(days=365)
+            tot_sales = self.db.query(func.sum(Sale.quantity)).filter(
+                and_(Sale.product_id == product_id, Sale.sale_date >= cutoff)
+            ).scalar()
+            annual_demand = float(tot_sales) if tot_sales and tot_sales > 0 else 365.0
+
+        S = float(product.ordering_cost or 50.0)
+        H = float(product.holding_cost_per_unit or 5.0)
+
+        if H <= 0:
+            H = 1.0  # prevent division by zero
+
+        eoq = math.sqrt((2.0 * annual_demand * S) / H)
+
+        return {
+            "product_id": product_id,
+            "product_name": product.name,
+            "annual_demand": round(annual_demand, 2),
+            "ordering_cost": round(S, 2),
+            "holding_cost_per_unit": round(H, 2),
+            "eoq": int(round(eoq))
+        }
+
     def calculate_safety_stock(
         self,
         store_id: int,

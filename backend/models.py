@@ -94,6 +94,25 @@ class User(Base):
 
 
 # ============= STORE & PRODUCT MASTER DATA =============
+class Supplier(Base):
+    """Supplier master data for procurement timing and lead times"""
+    __tablename__ = "suppliers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=False)
+    lead_time_days = Column(Integer, nullable=False, default=7)
+    contact_email = Column(String(255))
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    products = relationship("Product", back_populates="supplier")
+
+    __table_args__ = (
+        Index('idx_supplier_name', 'name'),
+    )
+
+
 class Store(Base):
     """Store/master data for retail locations"""
     __tablename__ = "stores"
@@ -134,13 +153,17 @@ class Product(Base):
     category = Column(String(100), nullable=False, index=True)
     sku = Column(String(100), unique=True)
     brand = Column(String(100))
+    supplier_id = Column(Integer, ForeignKey("suppliers.id", ondelete="SET NULL"), nullable=True, index=True)
     unit_of_measure = Column(String(20), default="unit")
     unit_cost = Column(Float)
     selling_price = Column(Float)
+    ordering_cost = Column(Float, default=50.0)  # S: Cost per purchase order
+    holding_cost_per_unit = Column(Float, default=5.0)  # H: Annual holding cost per unit
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
+    supplier = relationship("Supplier", back_populates="products")
     sales = relationship("Sale", back_populates="product", cascade="all, delete-orphan")
     inventory_levels = relationship("InventoryLevel", back_populates="product", cascade="all, delete-orphan")
     # Access alerts via product.inventory_levels[x].alerts
@@ -150,6 +173,7 @@ class Product(Base):
         Index('idx_product_name', 'name'),
         Index('idx_product_category', 'category'),
         Index('idx_product_sku', 'sku'),
+        Index('idx_product_supplier', 'supplier_id'),
     )
 
 

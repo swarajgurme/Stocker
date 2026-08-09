@@ -10,8 +10,8 @@ from sqlalchemy import func, and_
 
 from flask import Blueprint, request, jsonify
 
-from database import get_db_session
-from models import Store, Product, Sale, Cluster
+from database import get_db_session, engine
+from models import Store, Product, Sale, Cluster, Forecast, InventoryLevel, Anomaly
 from services.analytics_service import AnalyticsService
 from auth_service import require_role, UserRole, get_current_user, log_auth_action
 
@@ -21,6 +21,7 @@ analytics_bp = Blueprint('analytics', __name__)
 
 
 # ============= CLUSTER ANALYSIS =============
+@analytics_bp.route('/cluster', methods=['GET'])
 @analytics_bp.route('/clusters', methods=['GET'])
 @require_role(
     UserRole.ADMIN,
@@ -65,7 +66,8 @@ def get_clusters():
                 analysis_date = datetime.strptime(analysis_date_str, '%Y-%m-%d').date()
             else:
                 latest = db.query(func.max(Cluster.cluster_analysis_date)).scalar()
-                analysis_date = latest or datetime.utcnow().date()
+                max_sale = db.query(func.max(Sale.sale_date)).scalar()
+                analysis_date = latest or max_sale or datetime.utcnow().date()
 
             # Fetch cluster assignments
             clusters = db.query(Cluster).filter_by(
@@ -75,8 +77,10 @@ def get_clusters():
             if not clusters:
                 # Run clustering analysis
                 service = AnalyticsService(db)
-                cluster_results = service.run_cluster_analysis(analysis_date)
-                clusters = cluster_results.get('clusters', [])
+                service.run_cluster_analysis(analysis_date)
+                clusters = db.query(Cluster).filter_by(
+                    cluster_analysis_date=analysis_date
+                ).all()
 
             # Build response
             assignments = []
@@ -145,6 +149,7 @@ def get_clusters():
 
 # ============= EXECUTIVE KPI DASHBOARD =============
 @analytics_bp.route('/dashboard/kpi', methods=['GET'])
+@analytics_bp.route('/dashboard', methods=['GET'])
 @require_role(
     UserRole.ADMIN,
     UserRole.BUSINESS_ANALYST,
@@ -169,43 +174,69 @@ def get_executive_dashboard():
     """
     try:
         with get_db_session() as db:
-            # Time range: last 12 months
-            end_date = datetime.utcnow().date()
+            # Time range: last 12 months based on dataset sales
+            max_date = db.query(func.max(Sale.sale_date)).scalar()
+            end_date = max_date or datetime.utcnow().date()
             start_date = end_date - timedelta(days=365)
 
-            # Revenue trend (monthly)
-            monthly_revenue = db.query(
-                func.date_trunc('month', Sale.sale_date).label('month'),
-                func.sum(Sale.revenue).label('total')
-            ).filter(
-                Sale.sale_date.between(start_date, end_date)
-            ).group_by('month').order_by('month').all()
+            # Revenue trend (monthly) — dialect-safe
+            if engine.dialect.name == "postgresql":
+                month_expr = func.date_trunc("month", Sale.sale_date).label("month")
+            else:
+                month_expr = func.strftime("%Y-%m", Sale.sale_date).label("month")
 
-            revenue_trend = [{
-                "month": row.month.strftime('%Y-%m'),
-                "revenue": round(float(row.total), 2)
-            } for row in monthly_revenue]
+            monthly_revenue = (
+                db.query(month_expr, func.sum(Sale.revenue).label("total"))
+                .filter(Sale.sale_date.between(start_date, end_date))
+                .group_by(month_expr)
+                .order_by(month_expr)
+                .all()
+            )
+
+            revenue_trend = []
+            for row in monthly_revenue:
+                m = row.month
+                if hasattr(m, "strftime"):
+                    month_str = m.strftime("%Y-%m")
+                else:
+                    month_str = str(m)[:7]
+                revenue_trend.append(
+                    {"month": month_str, "revenue": round(float(row.total), 2)}
+                )
 
             # Forecast accuracy (avg MAPE)
-            from models import Forecast
             avg_mape = db.query(func.avg(Forecast.mape)).filter(
                 Forecast.created_at >= datetime.utcnow() - timedelta(days=30),
                 Forecast.status == 'completed'
             ).scalar()
             avg_mape = round(float(avg_mape or 0), 2)
 
-            # Inventory turnover ratio
-            total_sales = db.query(func.sum(Sale.quantity)).filter(
-                Sale.sale_date >= start_date
-            ).scalar() or 0
-            avg_inventory = 1000  # Placeholder - calculate from inventory_levels
-            inventory_turnover = round(total_sales / avg_inventory if avg_inventory > 0 else 0, 2)
+            # Inventory turnover proxy: units sold / avg on-hand stock
+            total_sales = (
+                db.query(func.sum(Sale.quantity))
+                .filter(Sale.sale_date >= start_date)
+                .scalar()
+                or 0
+            )
+            avg_inventory = (
+                db.query(func.avg(InventoryLevel.current_stock)).scalar() or 0
+            )
+            avg_inventory_f = float(avg_inventory) if avg_inventory else 1.0
+            inventory_turnover = round(
+                float(total_sales) / avg_inventory_f if avg_inventory_f > 0 else 0,
+                2,
+            )
 
             # Low stock count
-            from models import InventoryLevel
             low_stock = db.query(InventoryLevel).filter(
                 InventoryLevel.current_stock < InventoryLevel.safety_stock
             ).count()
+
+            anomalies_open = db.query(Anomaly).filter(
+                Anomaly.is_reviewed.is_(False)
+            ).count()
+
+            active_stores = db.query(Store).filter(Store.is_active.is_(True)).count()
 
             # Top 5 stores by revenue
             top_stores = db.query(
@@ -247,8 +278,13 @@ def get_executive_dashboard():
                     },
                     "inventory_turnover": inventory_turnover,
                     "low_stock_count": low_stock,
+                    "anomalies_open": anomalies_open,
+                    "active_stores": active_stores,
+                    "demand_risk_score": round(
+                        min(100.0, low_stock * 12 + anomalies_open * 7), 1
+                    ),
                     "top_stores": top_stores_list,
-                    "category_performance": categories
+                    "category_performance": categories,
                 },
                 "timestamp": datetime.utcnow().isoformat()
             }), 200
@@ -404,4 +440,36 @@ def compare_stores():
             "status": "error",
             "error": "Failed to compare stores",
             "code": "COMPARISON_ERROR"
+        }), 500
+
+
+@analytics_bp.route('/transfers', methods=['GET'])
+@require_role(
+    UserRole.ADMIN,
+    UserRole.BUSINESS_ANALYST,
+    UserRole.SUPPLY_CHAIN_PLANNER,
+    UserRole.STORE_MANAGER
+)
+def get_analytics_transfers():
+    """
+    Get recommended inter-store stock transfers
+    """
+    try:
+        with get_db_session() as db:
+            service = AnalyticsService(db)
+            transfers = service.generate_stock_transfers()
+            return jsonify({
+                "status": "success",
+                "data": {
+                    "transfers": transfers,
+                    "count": len(transfers)
+                },
+                "timestamp": datetime.utcnow().isoformat()
+            }), 200
+    except Exception as e:
+        logger.error(f"Error generating stock transfers: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "error": "Failed to generate stock transfers",
+            "code": "TRANSFER_ERROR"
         }), 500

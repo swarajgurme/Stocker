@@ -6,10 +6,10 @@ Inventory optimization, reorder points, safety stock, alerts
 import logging
 from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify, g
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 
 from database import get_db_session
-from models import Store, Product, InventoryLevel, InventoryAlert
+from models import Store, Product, Supplier, InventoryLevel, InventoryAlert
 from services.inventory_service import InventoryService, get_inventory_service
 from services.forecast_service import ForecastService
 from auth_service import require_role, UserRole, get_current_user, log_auth_action
@@ -19,7 +19,68 @@ logger = logging.getLogger(__name__)
 inventory_bp = Blueprint('inventory', __name__)
 
 
+# ============= INVENTORY OPTIMIZATION ENDPOINT =============
+@inventory_bp.route('/optimization/<int:product_id>', methods=['GET'])
+@require_role(
+    UserRole.ADMIN,
+    UserRole.BUSINESS_ANALYST,
+    UserRole.SUPPLY_CHAIN_PLANNER,
+    UserRole.STORE_MANAGER
+)
+def get_inventory_optimization(product_id: int):
+    """
+    Get inventory optimization details (current stock, calculated ROP, calculated EOQ) for a product
+    """
+    try:
+        with get_db_session() as db:
+            product = db.query(Product).get(product_id)
+            if not product:
+                return jsonify({
+                    "status": "error",
+                    "error": f"Product with ID {product_id} not found",
+                    "code": "NOT_FOUND"
+                }), 404
+
+            total_stock = db.query(func.sum(InventoryLevel.current_stock)).filter_by(product_id=product_id).scalar() or 0
+            avg_rop = db.query(func.avg(InventoryLevel.reorder_point)).filter_by(product_id=product_id).scalar() or 0.0
+            avg_safety_stock = db.query(func.avg(InventoryLevel.safety_stock)).filter_by(product_id=product_id).scalar() or 0.0
+
+            inv_service = InventoryService(db)
+            eoq_data = inv_service.calculate_eoq(product_id)
+
+            supplier = db.query(Supplier).get(product.supplier_id) if product.supplier_id else None
+
+            return jsonify({
+                "status": "success",
+                "data": {
+                    "product_id": product.id,
+                    "product_name": product.name,
+                    "sku": product.sku,
+                    "category": product.category,
+                    "supplier_name": supplier.name if supplier else "Default Supplier",
+                    "lead_time_days": supplier.lead_time_days if supplier else 7,
+                    "current_stock": int(total_stock),
+                    "calculated_rop": round(float(avg_rop), 2),
+                    "calculated_safety_stock": round(float(avg_safety_stock), 2),
+                    "calculated_eoq": eoq_data["eoq"],
+                    "ordering_cost": eoq_data["ordering_cost"],
+                    "holding_cost_per_unit": eoq_data["holding_cost_per_unit"],
+                    "annual_demand": eoq_data["annual_demand"]
+                },
+                "timestamp": datetime.utcnow().isoformat()
+            }), 200
+    except Exception as e:
+        logger.error(f"Inventory optimization error: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "code": "OPTIMIZATION_ERROR"
+        }), 500
+
+
 # ============= GET INVENTORY LEVELS =============
+# SRS-compatible root path + nested path
+@inventory_bp.route('', methods=['GET'])
 @inventory_bp.route('/levels', methods=['GET'])
 @require_role(
     UserRole.ADMIN,

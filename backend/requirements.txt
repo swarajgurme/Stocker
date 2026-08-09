@@ -1,7 +1,8 @@
 Flask==3.0.0
-pandas==2.1.4
+pandas==2.3.3
 prophet==1.1.5
 flask-cors==4.0.0
+Flask-Limiter==3.8.0
 scikit-learn==1.3.2
 numpy==1.24.3
 python-dotenv==1.0.0
@@ -24,7 +25,7 @@ passlib==1.7.4
 scipy==1.11.4  # For statistical anomaly detection (z-score, IQR)
 statsmodels==0.14.1  # For ARIMA
 xgboost==2.0.3  # XGBoost regression
-tensorflow==2.16.1  # For LSTM (optional, heavy)
+# TensorFlow / LSTM omitted from default image size; add when LSTM is wired
 
 # Reporting
 ReportLab==4.0.7  # PDF generation

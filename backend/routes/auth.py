@@ -11,7 +11,9 @@ from sqlalchemy.exc import SQLAlchemyError
 from auth_service import (
     authenticate_user, create_user, hash_password, verify_password,
     create_access_token, create_refresh_token, decode_token,
-    get_current_user, require_role, UserRole, log_auth_action
+    decode_token_unverified_signature,
+    get_current_user, require_role, UserRole, log_auth_action,
+    blacklist_token,
 )
 from database import db_session
 from models import User
@@ -76,6 +78,13 @@ def register():
                 "error": "Password must be at least 8 characters",
                 "code": "VALIDATION_ERROR"
             }), 400
+
+        if role_str == UserRole.ADMIN.value:
+            return jsonify({
+                "status": "error",
+                "error": "Administrator accounts cannot be created via public registration",
+                "code": "FORBIDDEN_ROLE",
+            }), 403
 
         try:
             role = UserRole(role_str)
@@ -362,44 +371,35 @@ def refresh_token():
 
 # ============= LOGOUT =============
 @auth_bp.route('/logout', methods=['POST'])
-@require_role(UserRole.ADMIN, UserRole.BUSINESS_ANALYST, UserRole.SUPPLY_CHAIN_PLANNER, UserRole.STORE_MANAGER, UserRole.EXECUTIVE)
 def logout():
     """
-    Logout current user (blacklist tokens)
-
-    For JWT, we can't truly invalidate stateless tokens without a blacklist.
-    In production, use Redis-based token blacklist or short-lived tokens.
-
-    Response (200):
-        {
-            "status": "success",
-            "message": "Logged out successfully"
-        }
+    Invalidate the current access token (server-side blacklist).
+    Accepts Bearer token even when expired (signature-valid only).
     """
-    user = g.current_user
+    auth_header = request.headers.get("Authorization", "")
+    token = ""
+    if auth_header.lower().startswith("bearer ") and len(auth_header.split()) == 2:
+        token = auth_header.split()[1].strip()
 
-    # Get token from header
-    auth_header = request.headers.get('Authorization', '')
-    token = auth_header.replace('Bearer ', '') if auth_header.startswith('Bearer ') else ''
-
+    user_id_for_audit = None
     if token:
-        # In production: store token blacklist in Redis with expiry
-        from auth_service import blacklist_token
         blacklist_token(token)
+        payload = decode_token(token) or decode_token_unverified_signature(token)
+        if payload and payload.get("user_id"):
+            user_id_for_audit = payload.get("user_id")
 
-    # Audit log
     log_auth_action(
-        user_id=user.id,
+        user_id=user_id_for_audit,
         action="logout",
         resource_type="auth",
-        ip_address=request.remote_addr
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get("User-Agent"),
     )
-
-    logger.info(f"User logged out: {user.email} (ID: {user.id})")
 
     return jsonify({
         "status": "success",
-        "message": "Logged out successfully"
+        "data": {"logged_out": True},
+        "message": "Logged out successfully",
     }), 200
 
 

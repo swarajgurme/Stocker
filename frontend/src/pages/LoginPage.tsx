@@ -128,8 +128,7 @@ export default function LoginPage() {
                     className="pl-9"
                     type="password"
                     placeholder="Min. 8 characters"
-                    required
-                    minLength={8}
+                    minLength={mode === "register" ? 8 : undefined}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
@@ -141,7 +140,7 @@ export default function LoginPage() {
               </Button>
             </form>
             <p className="mt-5 text-center text-[11px] leading-relaxed text-[var(--muted)]">
-              Demo: analyst@stocker.demo · DemoPass123!
+              Demo: admin@stocker.com · admin
             </p>
           </CardContent>
         </Card>

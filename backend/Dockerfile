@@ -1,48 +1,33 @@
-# Stocker Backend Dockerfile
-# Multi-stage build for production
-
-FROM python:3.11-slim as builder
-
-WORKDIR /app
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements first for layer caching
-COPY requirements.txt .
-RUN pip install --user --no-cache-dir -r requirements.txt
-
-
-# Production stage
+# Stocker API — production-oriented image
 FROM python:3.11-slim
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    libpango-1.0-0 \
+    libcairo2 \
+    libgdk-pixbuf-2.0-0 \
+    libffi-dev \
+    shared-mime-info \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# Copy installed packages from builder
-COPY --from=builder /root/.local /root/.local
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir gunicorn==22.0.0
 
-# Copy application code
 COPY . .
 
-# Create non-root user
-RUN useradd -m -u 1000 stocker && chown -R stocker:stocker /app
+RUN mkdir -p logs reports \
+    && useradd -r -u 1000 -m stocker \
+    && chown -R stocker:stocker /app
 
-# Environment
-ENV PATH=/root/.local/bin:$PATH
-ENV FLASK_ENV=production
-ENV FLASK_DEBUG=False
-
-# Create necessary directories
-RUN mkdir -p logs reports
-
-# Expose port
-EXPOSE 5000
-
-# Switch to non-root user
 USER stocker
 
-# Run with gunicorn in production
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "server_new:app"]
+EXPOSE 5000
+
+ENV FLASK_ENV=production
+ENV PYTHONUNBUFFERED=1
+
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "3", "server:app"]

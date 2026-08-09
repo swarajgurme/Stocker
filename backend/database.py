@@ -30,15 +30,39 @@ POOL_TIMEOUT = int(os.getenv("DB_POOL_TIMEOUT", 30))
 POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", 1800))  # 30 minutes
 
 # ============= ENGINE CREATION =============
-engine = create_engine(
-    DATABASE_URL,
+def _is_sqlite(url: str) -> bool:
+    return url.strip().lower().startswith("sqlite")
+
+
+_SQLITE_ENGINE_KWARGS = dict(
+    connect_args={"check_same_thread": False},
+    pool_pre_ping=True,
+    echo=os.getenv("SQL_ECHO", "False").lower() == "true",
+)
+
+_POSTGRES_ENGINE_KWARGS = dict(
     pool_size=POOL_SIZE,
     max_overflow=MAX_OVERFLOW,
     pool_timeout=POOL_TIMEOUT,
     pool_recycle=POOL_RECYCLE,
-    pool_pre_ping=True,  # Verify connections before using
-    echo=os.getenv("SQL_ECHO", "False").lower() == "true"  # Log SQL queries (dev only)
+    pool_pre_ping=True,
+    echo=os.getenv("SQL_ECHO", "False").lower() == "true",
 )
+
+def _get_engine():
+    url = DATABASE_URL
+    if _is_sqlite(url):
+        return create_engine(url, **_SQLITE_ENGINE_KWARGS)
+    try:
+        eng = create_engine(url, **_POSTGRES_ENGINE_KWARGS)
+        with eng.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return eng
+    except Exception as exc:
+        logger.warning(f"PostgreSQL connection failed ({exc}); falling back to SQLite stocker_demo.db")
+        return create_engine("sqlite:///stocker_demo.db", **_SQLITE_ENGINE_KWARGS)
+
+engine = _get_engine()
 
 # ============= SESSION FACTORY =============
 SessionLocal = sessionmaker(
@@ -105,6 +129,52 @@ def close_db_session():
 
 
 # ============= MIGRATION UTILITIES =============
+def _bootstrap_inventory_from_sales(db) -> None:
+    """
+    Create inventory_levels for each store-product with observed sales when missing.
+    Derives deterministic stock levels from trailing demand proxy (supports demos).
+    """
+    from sqlalchemy import func
+    from datetime import timedelta
+    from models import InventoryLevel, Sale
+
+    max_date = db.query(func.max(Sale.sale_date)).scalar()
+    cutoff = (max_date - timedelta(days=365)) if max_date else (datetime.utcnow().date() - timedelta(days=365))
+    rows = (
+        db.query(
+            Sale.store_id,
+            Sale.product_id,
+            func.sum(Sale.quantity).label("tq"),
+            func.avg(Sale.ewma).label("avg_sig"),
+        )
+        .filter(Sale.sale_date >= cutoff)
+        .group_by(Sale.store_id, Sale.product_id)
+        .all()
+    )
+
+    for row in rows:
+        exists = db.query(InventoryLevel).filter_by(
+            store_id=row.store_id,
+            product_id=row.product_id,
+        ).first()
+        if exists:
+            continue
+        qty = int(row.tq or 0)
+        sig = float(row.avg_sig or 0)
+        current = max(35, min(950, qty * 3 + int(sig % 200)))
+        lvl = InventoryLevel(
+            store_id=row.store_id,
+            product_id=row.product_id,
+            current_stock=current,
+            safety_stock=max(25.0, sig * 0.05),
+            reorder_point=max(40.0, sig * 0.12),
+            lead_time_days=7,
+            last_calculated=datetime.utcnow(),
+        )
+        db.add(lvl)
+    logger.info("Inventory levels bootstrapped for store-product combinations")
+
+
 def migrate_csv_to_db(csv_path: str):
     """
     Migrate existing CSV data to PostgreSQL database.
@@ -114,7 +184,7 @@ def migrate_csv_to_db(csv_path: str):
         csv_path: Path to backend/data.csv
     """
     import pandas as pd
-    from models import Store, Product, Sale
+    from models import Store, Product, Sale, Supplier
 
     logger.info(f"Starting CSV migration from {csv_path}")
 
@@ -123,6 +193,29 @@ def migrate_csv_to_db(csv_path: str):
         logger.info(f"Loaded {len(df)} records from CSV")
 
         with get_db_session() as db:
+            # ============= MIGRATE SUPPLIERS =============
+            suppliers_data = [
+                {"name": "Apex Auto Logistics", "lead_time_days": 5, "contact_email": "orders@apexauto.com"},
+                {"name": "Continental Components Ltd", "lead_time_days": 7, "contact_email": "supply@continental.com"},
+                {"name": "Precision Dynamics", "lead_time_days": 10, "contact_email": "sales@precisiondyn.com"},
+                {"name": "Metro Automotive Supply", "lead_time_days": 3, "contact_email": "orders@metrosupply.com"},
+            ]
+            supplier_ids = []
+            for s_info in suppliers_data:
+                existing_s = db.query(Supplier).filter_by(name=s_info["name"]).first()
+                if not existing_s:
+                    s_obj = Supplier(
+                        name=s_info["name"],
+                        lead_time_days=s_info["lead_time_days"],
+                        contact_email=s_info["contact_email"],
+                        is_active=True
+                    )
+                    db.add(s_obj)
+                    db.flush()
+                    supplier_ids.append(s_obj.id)
+                else:
+                    supplier_ids.append(existing_s.id)
+
             # ============= MIGRATE STORES =============
             store_mapping = {}
             for store_code in df['Store ID'].unique():
@@ -158,6 +251,7 @@ def migrate_csv_to_db(csv_path: str):
 
             for i, product_name in enumerate(product_names):
                 category = categories[i // 4] if i < 20 else "Misc"
+                assigned_supplier_id = supplier_ids[i % len(supplier_ids)] if supplier_ids else None
 
                 existing_product = db.query(Product).filter_by(name=product_name).first()
                 if not existing_product:
@@ -166,12 +260,22 @@ def migrate_csv_to_db(csv_path: str):
                         name=product_name,
                         category=category,
                         sku=f"SKU-{product_name.replace(' ', '-').upper()}",
+                        supplier_id=assigned_supplier_id,
+                        ordering_cost=float(40 + (i * 5) % 60),  # S: $40-$95 per PO
+                        holding_cost_per_unit=float(2.5 + (i * 0.5) % 8.0),  # H: $2.5-$10.0 annual holding cost
                         is_active=True
                     )
                     db.add(product)
                     db.flush()
                     product_mapping[i] = product.id
                 else:
+                    # Update supplier and costs if missing
+                    if not existing_product.supplier_id:
+                        existing_product.supplier_id = assigned_supplier_id
+                    if not existing_product.ordering_cost:
+                        existing_product.ordering_cost = float(40 + (i * 5) % 60)
+                    if not existing_product.holding_cost_per_unit:
+                        existing_product.holding_cost_per_unit = float(2.5 + (i * 0.5) % 8.0)
                     product_mapping[i] = existing_product.id
 
             logger.info(f"Migrated {len(product_mapping)} products")
@@ -206,6 +310,8 @@ def migrate_csv_to_db(csv_path: str):
                         sales_created += 1
 
             logger.info(f"Migrated {sales_created} sales records")
+
+            _bootstrap_inventory_from_sales(db)
             db.commit()
 
         logger.info("CSV migration completed successfully")

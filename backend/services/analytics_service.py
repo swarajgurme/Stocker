@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
+from sqlalchemy import func
 
 from database import get_db_session
 from models import Store, Product, Sale, Cluster
@@ -40,7 +41,8 @@ class AnalyticsService:
         """
         try:
             if analysis_date is None:
-                analysis_date = datetime.utcnow().date()
+                max_date = self.db.query(func.max(Sale.sale_date)).scalar()
+                analysis_date = max_date or datetime.utcnow().date()
 
             # Get aggregated sales by category and store
             # Using latest 90 days of data
@@ -248,6 +250,65 @@ class AnalyticsService:
 
         results.sort(key=lambda x: x['mape'])
         return results[:limit]
+
+    def generate_stock_transfers(self) -> List[Dict]:
+        """
+        Evaluate store inventory across the network to generate intelligent stock transfer directives.
+        FR-P1: If Store A current stock < ROP and Store B stock > 2x ROP, generate transfer recommendation.
+        """
+        from models import InventoryLevel, Store, Product
+
+        inventory_records = self.db.query(InventoryLevel).all()
+        product_stocks = {}
+        for inv in inventory_records:
+            if inv.product_id not in product_stocks:
+                product_stocks[inv.product_id] = []
+            product_stocks[inv.product_id].append(inv)
+
+        transfers = []
+        for product_id, inv_list in product_stocks.items():
+            product = self.db.query(Product).get(product_id)
+            if not product:
+                continue
+
+            low_stores = [inv for inv in inv_list if inv.current_stock < inv.reorder_point]
+            surplus_stores = [inv for inv in inv_list if inv.current_stock > (inv.reorder_point * 1.8)]
+
+            for low_inv in low_stores:
+                store_a = self.db.query(Store).get(low_inv.store_id)
+                needed = int(round(low_inv.reorder_point * 1.5 - low_inv.current_stock))
+                needed = max(10, needed)
+
+                for surplus_inv in surplus_stores:
+                    if surplus_inv.store_id == low_inv.store_id:
+                        continue
+                    store_b = self.db.query(Store).get(surplus_inv.store_id)
+                    avail = int(round(surplus_inv.current_stock - surplus_inv.reorder_point * 1.2))
+                    if avail > 5:
+                        qty = min(needed, avail)
+                        store_a_code = store_a.store_code if store_a else f"S{low_inv.store_id:03d}"
+                        store_a_name = store_a.name if store_a else f"Store {low_inv.store_id}"
+                        store_b_code = store_b.store_code if store_b else f"S{surplus_inv.store_id:03d}"
+                        store_b_name = store_b.name if store_b else f"Store {surplus_inv.store_id}"
+
+                        transfers.append({
+                            "id": f"TR-{product.id}-{surplus_inv.store_id}-{low_inv.store_id}",
+                            "product_id": product.id,
+                            "product_name": product.name,
+                            "sku": product.sku,
+                            "source_store_id": store_b_code,
+                            "source_store_name": store_b_name,
+                            "target_store_id": store_a_code,
+                            "target_store_name": store_a_name,
+                            "quantity": qty,
+                            "directive": f"Transfer {qty} units of {product.name} from {store_b_name} to {store_a_name} instead of placing a new order.",
+                            "urgency": "High" if low_inv.current_stock < low_inv.safety_stock else "Medium"
+                        })
+                        needed -= qty
+                        if needed <= 0:
+                            break
+
+        return transfers
 
 
 def get_analytics_service() -> AnalyticsService:

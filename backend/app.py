@@ -8,6 +8,8 @@ import logging
 from logging.handlers import RotatingFileHandler
 from flask import Flask, request, g
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from config import get_config
 from database import engine, init_db, check_db_connection, close_db_session, get_db_session
@@ -46,6 +48,33 @@ def create_app(config_object=None) -> Flask:
         db_session.remove()
 
     app.teardown_appcontext(cleanup_db_session)
+
+    # ============= RATE LIMITING =============
+    if app.config.get("RATELIMIT_ENABLED") and not app.config.get("TESTING"):
+        limiter = Limiter(
+            key_func=get_remote_address,
+            app=app,
+            default_limits=[app.config.get("RATELIMIT_DEFAULT", "100/hour")],
+            storage_uri=app.config.get("RATELIMIT_STORAGE_URL", "memory://"),
+            headers_enabled=True,
+            swallow_errors=True,
+            meta_limits=[],
+        )
+
+        @limiter.request_filter
+        def _skip_rate_limit():
+            if request.path == "/health":
+                return True
+            return False
+
+        app.extensions["limiter"] = limiter
+        logger.info(
+            "Rate limiting enabled: %s (storage %s)",
+            app.config.get("RATELIMIT_DEFAULT"),
+            app.config.get("RATELIMIT_STORAGE_URL", "memory://"),
+        )
+    else:
+        logger.info("Rate limiting disabled for this configuration")
 
     # ============= CORS CONFIGURATION =============
     cors_origins = app.config.get('CORS_ORIGINS', ['http://localhost:5173'])
@@ -90,6 +119,7 @@ def create_app(config_object=None) -> Flask:
 
     # ============= REGISTER BLUEPRINTS =============
     register_blueprints(app)
+    _apply_route_rate_limits(app)
 
     # ============= HEALTH CHECK =============
     @app.route('/health', methods=['GET'])
@@ -215,6 +245,8 @@ def register_blueprints(app: Flask):
     from routes.forecast import forecast_bp
     from routes.inventory import inventory_bp
     from routes.analytics import analytics_bp
+    from routes.planning import planning_bp
+    from routes.procurement import procurement_bp
     from routes.anomaly import anomaly_bp
     from routes.recommendation import recommendation_bp
     from routes.report import report_bp
@@ -224,8 +256,28 @@ def register_blueprints(app: Flask):
     app.register_blueprint(forecast_bp, url_prefix='/api/forecast')
     app.register_blueprint(inventory_bp, url_prefix='/api/inventory')
     app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
+    app.register_blueprint(planning_bp, url_prefix='/api/planning')
+    app.register_blueprint(procurement_bp, url_prefix='/api/procurement')
     app.register_blueprint(anomaly_bp, url_prefix='/api/anomalies')
     app.register_blueprint(recommendation_bp, url_prefix='/api/recommendations')
     app.register_blueprint(report_bp, url_prefix='/api/reports')
 
     logger.info("All blueprints registered")
+
+
+def _apply_route_rate_limits(app: Flask) -> None:
+    """Tight limits on auth endpoints (global limiter still applies when enabled)."""
+    limiter = app.extensions.get("limiter")
+    if not limiter:
+        return
+    auth = app.blueprints.get("auth")
+    if not auth:
+        return
+    vf = auth.view_functions
+    if "login" in vf:
+        limiter.limit("10 per minute")(vf["login"])
+    if "register" in vf:
+        limiter.limit("5 per minute")(vf["register"])
+    if "refresh_token" in vf:
+        limiter.limit("30 per minute")(vf["refresh_token"])
+    logger.info("Auth route rate limits attached (login/register/refresh)")

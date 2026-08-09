@@ -201,14 +201,44 @@ class LSTMForecaster(BaseForecaster):
     def train(self, df: pd.DataFrame, **kwargs):
         raise ValueError(
             "LSTM is not enabled. Install TensorFlow/Keras and wire LSTMForecaster, "
-            "or choose prophet / arima / xgboost."
+            "or choose prophet / arima / xgboost / croston."
         )
 
     def predict(self, periods: int, **kwargs):
         raise ValueError("LSTM is not enabled in this deployment.")
 
 
-def _select_auto_model(n_points: int) -> str:
+class CrostonForecaster(BaseForecaster):
+    """Croston's method forecaster for intermittent and slow-moving materials"""
+
+    def __init__(self, alpha: float = 0.1):
+        super().__init__("croston")
+        self.alpha = alpha
+        self._last_hist = None
+        self._ts = None
+
+    def train(self, df: pd.DataFrame, **kwargs):
+        df = df.copy()
+        df["ds"] = pd.to_datetime(df["ds"])
+        self._ts = df.sort_values("ds")["y"]
+        self._last_hist = df["ds"].max()
+
+    def predict(self, periods: int, **kwargs) -> pd.DataFrame:
+        from ml_utils.croston import fit_predict_croston
+        res = fit_predict_croston(self._ts, forecast_days=periods, alpha=self.alpha)
+        start = pd.to_datetime(self._last_hist).normalize() + pd.Timedelta(days=1)
+        dates = pd.date_range(start=start, periods=periods, freq="D")
+        return pd.DataFrame(
+            {"ds": dates, "yhat": res["predictions"], "yhat_lower": res["lower_bound"], "yhat_upper": res["upper_bound"]}
+        )
+
+
+def _select_auto_model(df: pd.DataFrame) -> str:
+    n_points = len(df)
+    y = df["y"].values
+    zero_ratio = float(np.mean(y == 0)) if n_points > 0 else 0.0
+    if zero_ratio > 0.30:
+        return "croston"
     if n_points < 40:
         return "arima"
     if n_points < 160:
@@ -224,6 +254,7 @@ class ForecastService:
             "prophet": ProphetForecaster,
             "arima": ARIMAForecaster,
             "xgboost": XGBoostForecaster,
+            "croston": CrostonForecaster,
             "lstm": LSTMForecaster,
         }
         key = _normalize_model_key(model_type)
@@ -255,7 +286,7 @@ class ForecastService:
         raw_key = model_type or self.model_type
         nk = _normalize_model_key(raw_key)
         if nk == "auto":
-            nk = _select_auto_model(len(df))
+            nk = _select_auto_model(df)
         logger.info("Training %s on %s points (horizon=%s)", nk, len(df), horizon_days)
 
         last_error: Optional[Exception] = None

@@ -58,3 +58,6 @@ coverage.xml
 tempCodeRunnerFile.py
 *.tmp
 *.log
+
+# Downloaded UCI source workbook (~22MB; regenerate via scripts/fetch_uci_online_retail_csv.py)
+data_uci_online_retail.xlsx

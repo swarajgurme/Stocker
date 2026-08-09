@@ -3,14 +3,28 @@ Authentication service
 Handles JWT tokens, password hashing, and user authentication
 """
 
+import hashlib
 import logging
+import os
+import time
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any, Tuple
+from typing import Any, Dict, Optional, Tuple
 import uuid
 
 from flask import request, g
 import jwt
 from passlib.context import CryptContext
+
+# NOTE: passlib's bcrypt handler expects certain bcrypt internals.
+# In this environment, bcrypt lacks the attribute `__about__` which can break
+# verify() and cause login/registration to fail with 500 errors.
+# We patch passlib's bcrypt handler to work around the missing attribute.
+try:
+    import bcrypt  # type: ignore
+    if not hasattr(bcrypt, "__about__"):
+        bcrypt.__about__ = type("__about__", (), {"__version__": getattr(bcrypt, "__version__", "unknown")})()
+except Exception:
+    pass
 from sqlalchemy.exc import SQLAlchemyError
 
 from database import db_session
@@ -21,17 +35,31 @@ logger = logging.getLogger(__name__)
 config = get_config()
 
 # ============= PASSWORD HASHING =============
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Use bcrypt directly for compatibility.
+# passlib+bcrypt is failing in this environment.
+import bcrypt as _bcrypt  # type: ignore
 
 
 def hash_password(password: str) -> str:
-    """Hash a password using bcrypt"""
-    return pwd_context.hash(password)
+    """Hash a password using bcrypt (returns utf-8 string hash)."""
+    pw_bytes = password.encode("utf-8")
+    salt = _bcrypt.gensalt(rounds=12)
+    hashed = _bcrypt.hashpw(pw_bytes, salt)
+    return hashed.decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash"""
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify a password against its bcrypt hash."""
+    if not hashed_password:
+        return False
+    try:
+        return _bcrypt.checkpw(
+            plain_password.encode("utf-8"),
+            hashed_password.encode("utf-8"),
+        )
+    except Exception:
+        return False
+
 
 
 # ============= JWT TOKEN MANAGEMENT =============
@@ -89,6 +117,19 @@ def create_refresh_token(
     return token
 
 
+def decode_token_unverified_signature(token: str) -> Optional[Dict[str, Any]]:
+    """Decode JWT without expiry check — only for blacklist on logout."""
+    try:
+        return jwt.decode(
+            token,
+            config.JWT_SECRET_KEY,
+            algorithms=["HS256"],
+            options={"verify_exp": False, "verify_signature": True},
+        )
+    except jwt.InvalidTokenError:
+        return None
+
+
 def decode_token(token: str) -> Optional[Dict[str, Any]]:
     """
     Decode and validate a JWT token
@@ -133,6 +174,10 @@ def get_current_user() -> Optional[User]:
         return None
 
     token = parts[1]
+    if is_token_blacklisted(token):
+        logger.warning("Blacklisted token presented")
+        return None
+
     payload = decode_token(token)
 
     if not payload or payload.get("token_type") != "access":
@@ -142,21 +187,9 @@ def get_current_user() -> Optional[User]:
     if not user_id:
         return None
 
-    # Fetch user from database
+    # Fetch user from database (no mutation here — login flow updates last_login)
     try:
         user = db_session.query(User).filter_by(id=user_id, is_active=True).first()
-        if user:
-            # Update last login on first use
-            if not user.last_login:
-                user.last_login = datetime.utcnow()
-                user.login_count = 1
-                db_session.commit()
-            elif (datetime.utcnow() - user.last_login).total_seconds() > 300:
-                # Update login count if more than 5 minutes since last login
-                user.login_count += 1
-                user.last_login = datetime.utcnow()
-                db_session.commit()
-
         return user
     except SQLAlchemyError as e:
         logger.error(f"Error fetching user {user_id}: {str(e)}")
@@ -174,8 +207,12 @@ def require_role(*roles: UserRole):
 
         @wraps(func)
         def wrapper(*args, **kwargs):
-            # Allow unrestricted access in testing mode
-            if current_app.config.get('TESTING', False):
+            # Testing bypass only when no Authorization header (so JWT/blacklist stays testable).
+            ah = request.headers.get("Authorization", "")
+            testing_bypass = current_app.config.get("TESTING", False) and not (
+                ah.lower().startswith("bearer ")
+            )
+            if testing_bypass:
                 # Create or fetch a dummy test user
                 from database import db_session
                 from models import User
@@ -320,19 +357,78 @@ def update_last_login(user_id: int):
         logger.error(f"Error updating login for user {user_id}: {str(e)}")
 
 
-# ============= TOKEN BLACKLIST (simple in-memory for now, Redis later) =============
-_blacklisted_tokens = set()
+# ============= TOKEN BLACKLIST (in-process + optional Redis for multi-instance) =============
+_blacklisted_tokens: set[str] = set()
+_redis_bl_client: Any = None
+_redis_bl_checked = False
 
 
-def blacklist_token(token: str):
-    """Add token to blacklist (logout)"""
+def _redis_blacklist_client():
+    """Lazy singleton for Redis used only for JWT denylist."""
+    global _redis_bl_client, _redis_bl_checked
+    if _redis_bl_checked:
+        return _redis_bl_client
+    _redis_bl_checked = True
+    url = os.getenv("REDIS_URL", "").strip()
+    if not url or url.lower() == "memory://":
+        _redis_bl_client = None
+        return None
+    try:
+        import redis
+
+        client = redis.from_url(url, decode_responses=True, socket_connect_timeout=2)
+        client.ping()
+        _redis_bl_client = client
+        logger.info("JWT blacklist: using Redis at configured REDIS_URL")
+    except Exception as exc:
+        logger.warning("JWT blacklist: Redis unavailable (%s); using in-memory only", exc)
+        _redis_bl_client = None
+    return _redis_bl_client
+
+
+def _blacklist_redis_key(token: str) -> str:
+    payload = decode_token_unverified_signature(token) or {}
+    jti = payload.get("jti")
+    if jti:
+        return f"stocker:jwt_bl:jti:{jti}"
+    digest = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    return f"stocker:jwt_bl:h:{digest}"
+
+
+def _blacklist_ttl_seconds(token: str) -> int:
+    payload = decode_token_unverified_signature(token) or {}
+    exp = payload.get("exp")
+    if isinstance(exp, (int, float)):
+        ttl = int(exp - time.time())
+        return max(60, min(ttl, 86400 * 30))
+    return int(os.getenv("JWT_BLACKLIST_FALLBACK_TTL", "86400"))
+
+
+def blacklist_token(token: str) -> None:
+    """Denylist an access token until its natural expiry (in-memory + optional Redis)."""
     _blacklisted_tokens.add(token)
-    logger.info(f"Token blacklisted")
+    r = _redis_blacklist_client()
+    if r is not None:
+        try:
+            key = _blacklist_redis_key(token)
+            ttl = _blacklist_ttl_seconds(token)
+            r.setex(key, ttl, "1")
+        except Exception as exc:
+            logger.warning("Redis blacklist write failed: %s", exc)
+    logger.debug("Token blacklisted")
 
 
 def is_token_blacklisted(token: str) -> bool:
-    """Check if token is blacklisted"""
-    return token in _blacklisted_tokens
+    if token in _blacklisted_tokens:
+        return True
+    r = _redis_blacklist_client()
+    if r is not None:
+        try:
+            if r.get(_blacklist_redis_key(token)):
+                return True
+        except Exception as exc:
+            logger.warning("Redis blacklist read failed: %s", exc)
+    return False
 
 
 # ============= AUDIT LOGGING HELPER =============

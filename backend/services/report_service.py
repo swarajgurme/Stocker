@@ -7,9 +7,11 @@ import logging
 import os
 from datetime import datetime, timedelta
 from typing import Dict, Optional
-import json
 
 import pandas as pd
+from sqlalchemy import func
+
+from models import Sale, Product, Forecast, InventoryLevel
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +70,9 @@ class ReportService:
             report_type=report_type,
             store_id=store_id,
             start_date=start_date,
-            end_date=end_date
+            end_date=end_date,
+            include_forecasts=include_forecasts,
+            include_inventory=include_inventory,
         )
 
         # Generate based on format
@@ -89,7 +93,9 @@ class ReportService:
         report_type: str,
         store_id: Optional[int] = None,
         start_date: Optional[str] = None,
-        end_date: Optional[str] = None
+        end_date: Optional[str] = None,
+        include_forecasts: bool = True,
+        include_inventory: bool = True,
     ) -> Dict:
         """Collect all data needed for the report"""
         from database import get_db_session
@@ -144,14 +150,16 @@ class ReportService:
                 "units": int(row.units or 0)
             } for row in cat_query.all()]
 
-            # Inventory alerts
             if include_inventory:
                 alert_count = db.query(InventoryLevel).filter(
                     InventoryLevel.current_stock < InventoryLevel.safety_stock
                 ).count()
-                data["inventory"] = {"critical_alerts": alert_count}
+                avg_stock = db.query(func.avg(InventoryLevel.current_stock)).scalar() or 0
+                data["inventory"] = {
+                    "critical_alerts": alert_count,
+                    "avg_stock_level": round(float(avg_stock), 2),
+                }
 
-            # Forecast accuracy
             if include_forecasts:
                 avg_mape = db.query(func.avg(Forecast.mape)).filter(
                     Forecast.created_at >= datetime.utcnow() - timedelta(days=30),
@@ -238,21 +246,17 @@ class ReportService:
 
     def _generate_csv(self, data: Dict, filepath: str):
         """Generate CSV report"""
-        rows = []
-        rows.append(["Stocker Enterprise Report"])
-        rows.append(["Generated At", data['generated_at']])
-        rows.append([])
-        rows.append(["Summary"])
-        rows.append(["Total Revenue", data['summary']['total_revenue']])
-        rows.append(["Total Units", data['summary']['total_units']])
-        rows.append([])
-        rows.append(["Category", "Revenue", "Units"])
-
-        for cat in data.get('by_category', []):
-            rows.append([cat['category'], cat['revenue'], cat['units']])
-
-        df = pd.DataFrame(rows[5:], columns=rows[4])
-        df.to_csv(filepath, index=False)
+        lines = [
+            ["report", "Stocker Enterprise"],
+            ["generated_at", data["generated_at"]],
+            ["total_revenue", data["summary"]["total_revenue"]],
+            ["total_units", data["summary"]["total_units"]],
+            [],
+            ["category", "revenue", "units"],
+        ]
+        for cat in data.get("by_category", []):
+            lines.append([cat["category"], cat["revenue"], cat["units"]])
+        pd.DataFrame(lines).to_csv(filepath, index=False, header=False)
         logger.info(f"CSV report saved: {filepath}")
 
     def _generate_html(self, data: Dict, report_type: str) -> str:

@@ -36,6 +36,7 @@ const models = [
   { value: "prophet", label: "Prophet" },
   { value: "arima", label: "ARIMA" },
   { value: "xgboost", label: "XGBoost" },
+  { value: "croston", label: "Croston's Method (Intermittent Spare Parts)" },
 ];
 
 export default function ForecastPage() {

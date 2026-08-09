@@ -121,12 +121,87 @@ def generate_report():
         }), 500
 
 
+# ============= SRS GET EXPORT =============
+@report_bp.route('/export', methods=['GET'])
+@require_role(UserRole.ADMIN, UserRole.BUSINESS_ANALYST, UserRole.EXECUTIVE)
+def export_report_get():
+    """SRS-aligned GET alias for `/api/reports/export`."""
+    user = g.current_user
+    try:
+        format_str = request.args.get('format', 'csv')
+        report_type = request.args.get('report_type', 'executive_summary')
+        store_id_q = request.args.get('store_id')
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+
+        try:
+            report_format = ReportFormat(format_str.lower())
+        except ValueError:
+            report_format = ReportFormat.CSV
+
+        store_id_int = None
+        if store_id_q:
+            with get_db_session() as db:
+                store = db.query(Store).filter_by(store_code=store_id_q).first()
+                if store:
+                    store_id_int = store.id
+
+        service = ReportService()
+        report_path = service.generate_report(
+            report_type=report_type,
+            format=report_format,
+            store_id=store_id_int,
+            start_date=start_date,
+            end_date=end_date,
+            include_forecasts=True,
+            include_inventory=True,
+            user_id=user.id,
+        )
+
+        log_auth_action(
+            user_id=user.id,
+            action="report_exported",
+            resource_type="report",
+            details={
+                "type": report_type,
+                "format": format_str,
+                "store_id": store_id_q,
+            },
+        )
+
+        fname = report_path.replace("\\", "/").split("/")[-1]
+
+        return jsonify({
+            "status": "success",
+            "data": {
+                "report_id": fname.split(".")[0],
+                "download_url": f"/api/reports/download/{fname}",
+                "format": format_str,
+            },
+            "timestamp": datetime.utcnow().isoformat(),
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Report export GET error: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "error": "Failed to generate export",
+            "code": "REPORT_ERROR",
+        }), 500
+
+
 # ============= DOWNLOAD REPORT =============
 @report_bp.route('/download/<filename>', methods=['GET'])
 @require_role(UserRole.ADMIN, UserRole.BUSINESS_ANALYST, UserRole.EXECUTIVE)
 def download_report(filename: str):
     """Download generated report file"""
     try:
+        if ".." in filename or "/" in filename or "\\" in filename:
+            return jsonify({
+                "status": "error",
+                "error": "Invalid filename",
+                "code": "VALIDATION_ERROR",
+            }), 400
         # In production, files stored in S3 or secure file server
         reports_dir = 'reports'
         return send_file(

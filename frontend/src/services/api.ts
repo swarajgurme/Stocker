@@ -165,6 +165,8 @@ export const inventoryAPI = {
       `/api/inventory${q ? `?${q}` : ""}`,
     );
   },
+  optimization: (productId: number) =>
+    apiRequest<InventoryOptimizationResult>(`/api/inventory/optimization/${productId}`),
   alerts: (params: Record<string, string> = {}) => {
     const q = new URLSearchParams(params).toString();
     return apiRequest<{ alerts: AlertRow[]; count: number }>(
@@ -183,6 +185,22 @@ export type InventoryRow = {
   reorder_point: number;
   lead_time_days: number;
   status: string;
+};
+
+export type InventoryOptimizationResult = {
+  product_id: number;
+  product_name: string;
+  sku: string;
+  category: string;
+  supplier_name: string;
+  lead_time_days: number;
+  current_stock: number;
+  calculated_rop: number;
+  calculated_safety_stock: number;
+  calculated_eoq: number;
+  ordering_cost: number;
+  holding_cost_per_unit: number;
+  annual_demand: number;
 };
 
 export type AlertRow = {
@@ -208,6 +226,57 @@ export const analyticsAPI = {
     apiRequest<Array<{ category: string; total_sales: number; units: number }>>(
       `/api/analytics/sales-by-category?period=${period}`,
     ),
+};
+
+export const planningAPI = {
+  transfers: () =>
+    apiRequest<{ transfers: StockTransferRow[]; count: number }>(
+      "/api/planning/transfers",
+    ),
+};
+
+export type StockTransferRow = {
+  id: string;
+  product_id: number;
+  product_name: string;
+  sku: string;
+  source_store_id: string;
+  source_store_name: string;
+  target_store_id: string;
+  target_store_name: string;
+  quantity: number;
+  directive: string;
+  urgency: string;
+};
+
+export const procurementAPI = {
+  recommendations: (storeId?: string) =>
+    apiRequest<{ recommendations: ProcurementCardRow[]; count: number }>(
+      `/api/procurement/recommendations${storeId ? `?store_id=${storeId}` : ""}`,
+    ),
+};
+
+export type ProcurementCardRow = {
+  id: string;
+  product_id: number;
+  product_name: string;
+  sku: string;
+  category: string;
+  store_id: string;
+  store_name: string;
+  supplier_id: number | null;
+  supplier_name: string;
+  lead_time_days: number;
+  current_stock: number;
+  reorder_point: number;
+  safety_stock: number;
+  order_quantity: number;
+  order_by_date: string;
+  status: string;
+  urgent_review_flag: boolean;
+  urgent_review_status: string;
+  reason: string;
+  priority: number;
 };
 
 export type DashboardPayload = {
