@@ -175,7 +175,7 @@ if __name__ == '__main__':
     # Get config
     flask_env = os.getenv('FLASK_ENV', 'development')
     flask_debug = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
-    flask_port = int(os.getenv('FLASK_PORT', 5000))
+    flask_port = int(os.getenv('PORT', os.getenv('FLASK_PORT', 5000)))
     flask_host = os.getenv('FLASK_HOST', '0.0.0.0')
 
     logger.info("=" * 60)
