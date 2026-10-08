@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Lock, Mail, Sparkles, User } from "lucide-react";
+import { Lock, Mail, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
+import { Logo } from "@/components/ui/Logo";
 
 export default function LoginPage() {
   const { login, register, isAuthenticated } = useAuth();
@@ -60,8 +61,8 @@ export default function LoginPage() {
         className="relative w-full max-w-md"
       >
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--accent)] to-[var(--violet)] shadow-[var(--shadow-glow)]">
-            <Sparkles className="h-7 w-7 text-[var(--accent-foreground)]" />
+          <div className="mx-auto mb-4 flex justify-center">
+            <Logo size={60} glow />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">
             <span className="gradient-text">Stocker Enterprise</span>

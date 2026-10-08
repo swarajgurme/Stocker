@@ -21,6 +21,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { canAccess, routeRoles } from "@/lib/roles";
 import { cn } from "@/lib/utils";
+import { BrandHeader, Logo } from "@/components/ui/Logo";
 
 const nav = [
   { to: "/", label: "Executive", icon: Gauge, end: true, roles: routeRoles.executive },
@@ -93,16 +94,8 @@ export function AppShell() {
         className="glass-panel-strong fixed inset-y-0 left-0 z-40 hidden w-[var(--sidebar-width)] flex-col border-r border-[var(--border)] md:flex"
         aria-label="Main navigation"
       >
-        <div className="flex h-16 items-center gap-3 border-b border-[var(--border)] px-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--violet)] text-[var(--accent-foreground)] shadow-[var(--shadow-glow)]">
-            <Sparkles className="h-4 w-4" />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--muted)]">
-              Stocker
-            </p>
-            <p className="text-sm font-semibold text-[var(--text)]">Enterprise AI</p>
-          </div>
+        <div className="flex h-16 items-center border-b border-[var(--border)] px-5">
+          <BrandHeader />
         </div>
         <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
           <NavItems />
@@ -154,7 +147,10 @@ export function AppShell() {
               className="glass-panel-strong fixed inset-y-0 left-0 z-50 flex w-[min(85vw,280px)] flex-col border-r border-[var(--border)] md:hidden"
             >
               <div className="flex h-14 items-center justify-between border-b border-[var(--border)] px-4">
-                <span className="font-semibold">Stocker</span>
+                <div className="flex items-center gap-2">
+                  <Logo size={24} />
+                  <span className="font-semibold text-sm">Stocker</span>
+                </div>
                 <Button variant="ghost" size="icon" type="button" onClick={() => setMobileOpen(false)}>
                   <X className="h-5 w-5" />
                 </Button>
