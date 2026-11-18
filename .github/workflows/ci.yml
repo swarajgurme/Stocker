@@ -21,6 +21,7 @@ jobs:
         env:
           FLASK_ENV: testing
           SKIP_ALEMBIC: "true"
+          PYTHONPATH: .
         run: pytest tests/ -q --tb=short
 
   frontend:
