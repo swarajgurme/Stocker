@@ -113,10 +113,7 @@ export function AppShell() {
                 <Sparkles className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
               </div>
               <div className="text-left">
-                <div className="font-bold text-[11px] font-mono tracking-wider flex items-center gap-1">
-                  <span className="silver-text">AI COPILOT</span>
-                  <span className="copper-gold-text text-[9px]">★</span>
-                </div>
+                <div className="font-bold text-[11px] font-mono tracking-wider silver-text">AI COPILOT</div>
                 <div className="text-[10px] text-[var(--muted)] font-normal">Autonomous Intelligence</div>
               </div>
             </div>
@@ -218,11 +215,6 @@ export function AppShell() {
               <span className="text-emerald-400 font-semibold">Telemetry Active</span>
               <span className="text-slate-600">|</span>
               <span className="text-slate-300">Prophet & Croston ML</span>
-            </div>
-
-            <div className="copper-gold-rim hidden lg:flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1.5 font-mono text-[10px]">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
-              <span className="copper-gold-text font-bold uppercase tracking-wider">Copper-Gold Telemetry</span>
             </div>
 
             <button

@@ -135,17 +135,9 @@ export function BrandHeader({ className = "" }: { className?: string }) {
     <div className={`flex items-center gap-3 ${className}`}>
       <Logo size={36} glow />
       <div>
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <p className="text-[11px] font-bold uppercase tracking-[0.25em] font-mono silver-text">
-            Stocker
-          </p>
-          <span className="silver-badge rounded-[4px] px-1 py-0.2 text-[8.5px] font-mono font-bold tracking-tight">
-            SILVER
-          </span>
-          <span className="copper-gold-badge rounded-[4px] px-1 py-0.2 text-[8.5px] font-mono font-bold tracking-tight">
-            COPPER-GOLD
-          </span>
-        </div>
+        <p className="text-[11px] font-bold uppercase tracking-[0.25em] font-mono silver-text">
+          Stocker
+        </p>
         <p className="text-sm font-semibold tracking-tight text-[var(--text)]">Autonomous SCM</p>
       </div>
     </div>
