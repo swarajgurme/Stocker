@@ -12,7 +12,7 @@ export function Logo({ className = "", size = 32, glow = false }: LogoProps) {
     >
       {glow && (
         <div
-          className="absolute inset-0 rounded-2xl bg-cyan-500/25 blur-lg pointer-events-none"
+          className="absolute inset-0 rounded-2xl bg-emerald-500/20 blur-md pointer-events-none"
           style={{ transform: "scale(1.2)" }}
         />
       )}
@@ -25,30 +25,38 @@ export function Logo({ className = "", size = 32, glow = false }: LogoProps) {
         className="relative z-10 transition-transform duration-300 hover:scale-105"
       >
         <defs>
+          {/* Alpine Emerald Top Face */}
           <linearGradient id="stocker-grad-top" x1="6" y1="5" x2="34" y2="21" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#22d3ee" />
-            <stop offset="100%" stopColor="#06b6d4" />
+            <stop offset="0%" stopColor="#34d399" />
+            <stop offset="100%" stopColor="#10b981" />
           </linearGradient>
+
+          {/* Deep Spruce Left Face */}
           <linearGradient id="stocker-grad-left" x1="5" y1="16" x2="20" y2="35" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#0ea5e9" />
-            <stop offset="100%" stopColor="#3b82f6" />
+            <stop offset="0%" stopColor="#059669" />
+            <stop offset="100%" stopColor="#047857" />
           </linearGradient>
+
+          {/* Glacier Cyan Right Face */}
           <linearGradient id="stocker-grad-right" x1="20" y1="16" x2="35" y2="35" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#6366f1" />
-            <stop offset="100%" stopColor="#8b5cf6" />
+            <stop offset="0%" stopColor="#06b6d4" />
+            <stop offset="100%" stopColor="#0f766e" />
           </linearGradient>
+
           <filter id="stocker-shadow" x="-10%" y="-10%" width="120%" height="120%" filterUnits="userSpaceOnUse">
-            <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#000000" floodOpacity="0.25" />
+            <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#022c22" floodOpacity="0.4" />
           </filter>
         </defs>
 
-        {/* Outer Hexagon / Isometric Base Container */}
+        {/* Outer Tactile Hexagonal Tile Container */}
         <rect
           width="40"
           height="40"
-          rx="10"
+          rx="9"
           fill="url(#stocker-grad-left)"
-          fillOpacity="0.12"
+          fillOpacity="0.14"
+          stroke="rgba(52, 211, 153, 0.25)"
+          strokeWidth="1"
         />
 
         {/* Isometric Stock Cube Top Face */}
@@ -70,17 +78,17 @@ export function Logo({ className = "", size = 32, glow = false }: LogoProps) {
           fill="url(#stocker-grad-right)"
         />
 
-        {/* Dynamic Forecasting Trajectory / 'S' Node Line */}
+        {/* Autonomous Telemetry Pathway */}
         <path
           d="M13 13.5L20 9.5L27 13.5L20 17.5L13 13.5Z"
           fill="#ffffff"
-          fillOpacity="0.45"
+          fillOpacity="0.4"
         />
 
-        {/* AI Optimization Spark Node in the center */}
+        {/* Autonomous Central Node */}
         <circle cx="20" cy="20.5" r="2.5" fill="#ffffff" />
         <path
-          d="M20 16.5V24.5M16 20.5H24"
+          d="M20 17V24M16.5 20.5H23.5"
           stroke="#ffffff"
           strokeWidth="1.2"
           strokeLinecap="round"
@@ -93,12 +101,17 @@ export function Logo({ className = "", size = 32, glow = false }: LogoProps) {
 export function BrandHeader({ className = "" }: { className?: string }) {
   return (
     <div className={`flex items-center gap-3 ${className}`}>
-      <Logo size={36} glow />
+      <Logo size={34} glow />
       <div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--accent)] font-mono">
-          Stocker
-        </p>
-        <p className="text-sm font-semibold tracking-tight text-[var(--text)]">Enterprise AI</p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--accent)] font-mono">
+            Stocker
+          </p>
+          <span className="rounded-[4px] bg-[var(--accent)]/15 px-1 py-0.2 text-[9px] font-mono text-[var(--accent)] border border-[var(--accent)]/30">
+            FLEET
+          </span>
+        </div>
+        <p className="text-sm font-semibold tracking-tight text-[var(--text)]">Autonomous SCM</p>
       </div>
     </div>
   );

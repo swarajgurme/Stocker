@@ -207,10 +207,10 @@ export const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
             type="button"
             onClick={() => setChatOpen(true)}
             aria-label="Open AI Copilot"
-            className="group relative flex h-14 items-center gap-3 rounded-full bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 px-5 text-white shadow-xl shadow-indigo-500/30 transition-all duration-300 hover:scale-105 hover:shadow-indigo-500/50 focus:outline-none focus:ring-4 focus:ring-indigo-400/40"
+            className="group relative flex h-14 items-center gap-3 rounded-full bg-gradient-to-r from-emerald-600 via-teal-700 to-emerald-800 px-5 text-white shadow-xl shadow-emerald-500/25 transition-all duration-300 hover:scale-105 hover:shadow-emerald-500/40 focus:outline-none focus:ring-4 focus:ring-emerald-400/40"
           >
             {/* Glowing ring animation */}
-            <span className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-violet-600 to-blue-500 opacity-70 blur-sm group-hover:opacity-100 transition duration-300 -z-10 animate-pulse" />
+            <span className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 opacity-60 blur-sm group-hover:opacity-100 transition duration-300 -z-10 animate-pulse" />
             
             <div className="relative flex items-center justify-center">
               <Bot className="h-6 w-6 transition-transform group-hover:rotate-12 duration-200" />
@@ -221,11 +221,11 @@ export const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
             </div>
 
             <div className="flex flex-col text-left">
-              <span className="text-xs font-bold tracking-wide uppercase text-indigo-100 flex items-center gap-1">
+              <span className="text-xs font-bold tracking-wide uppercase text-emerald-100 flex items-center gap-1 font-mono">
                 AI Copilot <Sparkles className="h-3 w-3 text-amber-300 animate-spin" style={{ animationDuration: "3s" }} />
               </span>
               <span className="text-[11px] text-white/80 font-normal">
-                Ask in any language
+                Autonomous Intelligence
               </span>
             </div>
           </button>
@@ -247,16 +247,16 @@ export const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
             }`}
           >
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-[var(--border)] bg-gradient-to-r from-violet-600/10 via-indigo-600/10 to-blue-600/10 px-4 py-3">
+            <div className="flex items-center justify-between border-b border-[var(--border)] bg-gradient-to-r from-emerald-600/10 via-teal-600/10 to-cyan-600/10 px-4 py-3">
               <div className="flex items-center gap-3">
-                <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-md shadow-indigo-500/20">
+                <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-md shadow-emerald-500/20">
                   <Bot className="h-5 w-5" />
                   <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-[var(--surface)]" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-[var(--text)]">Stocker AI Copilot</h3>
-                    <span className="rounded-full bg-indigo-500/15 border border-indigo-500/30 px-2 py-0.5 text-[10px] font-medium text-indigo-600 dark:text-indigo-400">
+                    <h3 className="text-sm font-bold text-[var(--text)] font-mono">STOCKER COPILOT</h3>
+                    <span className="rounded bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-mono font-medium text-emerald-400">
                       {activeProviderLabel}
                     </span>
                   </div>
@@ -406,7 +406,7 @@ export const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
                     className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}
                   >
                     {!isUser && (
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-sm mt-0.5">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-sm mt-0.5">
                         <Bot className="h-4 w-4" />
                       </div>
                     )}
@@ -415,7 +415,7 @@ export const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
                       <div
                         className={`rounded-2xl px-4 py-2.5 shadow-sm text-xs ${
                           isUser
-                            ? "bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-tr-xs"
+                            ? "bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-tr-xs"
                             : "bg-[var(--surface2)] text-[var(--text)] border border-[var(--border)] rounded-tl-xs"
                         }`}
                       >
@@ -457,7 +457,7 @@ export const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
                   animate={{ opacity: 1 }}
                   className="flex items-center gap-3 text-xs text-[var(--muted)]"
                 >
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 text-white">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-600 to-teal-700 text-white">
                     <Bot className="h-4 w-4" />
                   </div>
                   <div className="flex items-center gap-1.5 rounded-2xl bg-[var(--surface2)] border border-[var(--border)] px-4 py-3">
@@ -496,7 +496,7 @@ export const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
                   type="submit"
                   size="icon"
                   disabled={!input.trim() || loading}
-                  className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-sm hover:opacity-95 disabled:opacity-40"
+                  className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-sm hover:opacity-95 disabled:opacity-40"
                 >
                   <Send className="h-4 w-4" />
                 </Button>

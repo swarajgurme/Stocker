@@ -106,19 +106,19 @@ export function AppShell() {
           <button
             type="button"
             onClick={() => setChatOpen(true)}
-            className="flex w-full items-center justify-between rounded-xl border border-indigo-500/30 bg-gradient-to-r from-violet-600/10 via-indigo-600/10 to-blue-600/10 p-2.5 text-xs font-semibold text-[var(--text)] transition-all hover:border-indigo-500/50 hover:bg-indigo-500/15 group shadow-xs cursor-pointer"
+            className="flex w-full items-center justify-between rounded-lg border border-emerald-500/25 bg-emerald-500/5 p-2.5 text-xs font-semibold text-[var(--text)] transition-all hover:border-emerald-500/45 hover:bg-emerald-500/10 group shadow-xs cursor-pointer"
           >
             <div className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-xs">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-xs">
                 <Sparkles className="h-3.5 w-3.5 animate-pulse" />
               </div>
               <div className="text-left">
-                <div className="font-bold text-[11px] text-[var(--text)]">AI Copilot</div>
-                <div className="text-[10px] text-[var(--muted)] font-normal">Multilingual Assistant</div>
+                <div className="font-bold text-[11px] text-[var(--text)] font-mono">AI COPILOT</div>
+                <div className="text-[10px] text-[var(--muted)] font-normal">Autonomous Intelligence</div>
               </div>
             </div>
-            <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
-              Live
+            <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-mono font-bold text-emerald-400">
+              ACTIVE
             </span>
           </button>
         </div>
@@ -203,17 +203,29 @@ export function AppShell() {
             </span>
           </div>
 
-          {/* Desktop AI Copilot Quick Launcher */}
+          {/* Telemetry Status Bar & Desktop Copilot Launcher */}
           <div className="hidden md:flex items-center gap-3">
+            <div className="flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface2)] px-3 py-1 font-mono text-[11px] text-[var(--muted)]">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <span className="text-[var(--text)] font-semibold">5 Store Nodes</span>
+              <span className="text-[var(--border-strong)]">|</span>
+              <span className="text-emerald-500 font-semibold">Telemetry Active</span>
+              <span className="text-[var(--border-strong)]">|</span>
+              <span>Prophet & Croston ML</span>
+            </div>
+
             <button
               type="button"
               onClick={() => setChatOpen(true)}
-              className="group flex items-center gap-2 rounded-full border border-indigo-500/30 bg-gradient-to-r from-violet-500/10 via-indigo-500/10 to-blue-500/10 px-3.5 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:border-indigo-500/50 hover:from-violet-500/20 hover:to-blue-500/20 transition-all shadow-xs"
+              className="group flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400 hover:border-emerald-500/50 hover:bg-emerald-500/20 transition-all shadow-xs cursor-pointer"
             >
-              <Sparkles className="h-3.5 w-3.5 text-indigo-500 animate-pulse" />
+              <Sparkles className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
               <span>AI Copilot</span>
-              <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.2 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                Online
+              <span className="rounded bg-emerald-500/20 px-1.5 py-0.2 text-[10px] text-emerald-300 font-mono font-bold">
+                LIVE
               </span>
             </button>
           </div>
