@@ -1,4 +1,4 @@
-# CDK Backend API
+# Stocker Backend API
 
 Sales forecasting and cluster analysis backend service built with Flask, Prophet, and scikit-learn.
 
