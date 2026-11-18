@@ -15,6 +15,7 @@ import {
   Layers,
   ArrowLeftRight,
   HelpCircle,
+  KeyRound,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { chatAPI, ChatMessage, ChatStatus } from "@/services/api";
@@ -79,6 +80,9 @@ export const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [status, setStatus] = useState<ChatStatus | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [customGeminiKey, setCustomGeminiKey] = useState(() => localStorage.getItem("stocker_gemini_key") || "");
+  const [tempKeyInput, setTempKeyInput] = useState(customGeminiKey);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -134,7 +138,7 @@ export const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
         .slice(-6)
         .map((m) => ({ role: m.role, content: m.content }));
 
-      const res = await chatAPI.sendMessage(text, historyPayload);
+      const res = await chatAPI.sendMessage(text, historyPayload, customGeminiKey);
 
       if (res.success && res.data) {
         const botMsg: ChatMessage = {
@@ -183,7 +187,7 @@ export const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
   };
 
   const activeProviderLabel =
-    status?.active_provider === "gemini"
+    customGeminiKey || status?.active_provider === "gemini"
       ? "Gemini 1.5 Flash"
       : status?.active_provider === "openai"
       ? "OpenAI GPT-4o"
@@ -268,6 +272,18 @@ export const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
                 <Button
                   variant="ghost"
                   size="icon"
+                  className={`h-8 w-8 ${showKeyModal ? "text-primary" : "text-[var(--muted)]"} hover:text-[var(--text)]`}
+                  onClick={() => {
+                    setTempKeyInput(customGeminiKey);
+                    setShowKeyModal(!showKeyModal);
+                  }}
+                  title="Configure Gemini API Key"
+                >
+                  <KeyRound className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="h-8 w-8 text-[var(--muted)] hover:text-[var(--text)]"
                   onClick={() => setIsExpanded(!isExpanded)}
                   title={isExpanded ? "Collapse width" : "Expand width"}
@@ -294,6 +310,68 @@ export const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
                 </Button>
               </div>
             </div>
+
+            {/* Optional Gemini API Key Drawer */}
+            {showKeyModal && (
+              <div className="border-b border-[var(--border)] bg-[var(--surface2)] p-3 text-xs">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-semibold text-[var(--text)] flex items-center gap-1.5">
+                    <KeyRound className="h-3.5 w-3.5 text-primary" /> Google Gemini API Key
+                  </span>
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] text-primary underline"
+                  >
+                    Get Free Key ↗
+                  </a>
+                </div>
+                <p className="text-[11px] text-[var(--muted)] mb-2">
+                  Optional: Paste your Google Gemini API key to enable open-ended generative AI in any language. Without a key, Stocker uses its built-in live intelligence engine.
+                </p>
+                <div className="flex gap-1.5">
+                  <input
+                    type="password"
+                    value={tempKeyInput}
+                    onChange={(e) => setTempKeyInput(e.target.value)}
+                    placeholder="AIzaSy..."
+                    className="flex-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs outline-none focus:border-primary"
+                  />
+                  <Button
+                    size="sm"
+                    className="h-7 text-xs px-2.5"
+                    onClick={() => {
+                      const trimmed = tempKeyInput.trim();
+                      setCustomGeminiKey(trimmed);
+                      if (trimmed) {
+                        localStorage.setItem("stocker_gemini_key", trimmed);
+                      } else {
+                        localStorage.removeItem("stocker_gemini_key");
+                      }
+                      setShowKeyModal(false);
+                    }}
+                  >
+                    Save
+                  </Button>
+                  {customGeminiKey && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs px-2"
+                      onClick={() => {
+                        setCustomGeminiKey("");
+                        setTempKeyInput("");
+                        localStorage.removeItem("stocker_gemini_key");
+                        setShowKeyModal(false);
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Quick Suggestion Chips */}
             <div className="flex items-center gap-1.5 overflow-x-auto border-b border-[var(--border)] bg-[var(--surface2)]/50 px-3 py-2 text-xs no-scrollbar">

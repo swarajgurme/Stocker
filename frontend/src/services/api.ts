@@ -403,11 +403,18 @@ export interface ChatStatus {
 }
 
 export const chatAPI = {
-  sendMessage: (message: string, history?: { role: string; content: string }[]) =>
-    apiRequest<ChatResponse>("/api/chat", {
+  sendMessage: (
+    message: string,
+    history?: { role: string; content: string }[],
+    geminiApiKey?: string,
+  ) => {
+    const customKey = geminiApiKey || localStorage.getItem("stocker_gemini_key") || "";
+    return apiRequest<ChatResponse>("/api/chat", {
       method: "POST",
+      headers: customKey ? { "x-gemini-api-key": customKey } : {},
       body: JSON.stringify({ message, history }),
-    }),
+    });
+  },
   getStatus: () => apiRequest<ChatStatus>("/api/chat/status"),
 };
 

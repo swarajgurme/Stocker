@@ -42,9 +42,10 @@ def handle_chat_message():
             }), 400
 
         history = data.get('history', [])
+        client_key = request.headers.get('x-gemini-api-key') or data.get('gemini_api_key')
 
         with get_db_session() as db:
-            service = ChatService(db)
+            service = ChatService(db, gemini_api_key=client_key)
             result = service.chat(user_message=message, history=history)
 
             return jsonify({
