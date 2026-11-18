@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ─── Modern Fleet & Autonomous Supply Chain Design Tokens with Metallic Silver Elements ─── */
+/* ─── Modern Fleet & Autonomous Supply Chain Design Tokens (with Silver & Copper-Gold Elements) ─── */
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
@@ -22,7 +22,7 @@
   --cyan: #06b6d4;
   --violet: #2dd4bf;
   --danger: #fb7185;
-  --warn: #fbbf24;
+  --warn: #f59e0b;
   --success: #34d399;
   --radius: 0.65rem;
   --radius-lg: 0.85rem;
@@ -42,6 +42,15 @@
   --silver-500: #64748b;
   --silver-rim: rgba(226, 232, 240, 0.28);
   --silver-gradient: linear-gradient(135deg, #ffffff 0%, #cbd5e1 45%, #94a3b8 55%, #f1f5f9 100%);
+
+  /* Metallic Copper-Gold Design Tokens */
+  --copper-light: #fef3c7;
+  --copper-base: #f59e0b;
+  --copper-deep: #d97706;
+  --copper-dark: #b45309;
+  --copper-glow: rgba(245, 158, 11, 0.28);
+  --copper-rim: rgba(217, 119, 6, 0.38);
+  --copper-gradient: linear-gradient(135deg, #fffbeb 10%, #fcd34d 30%, #f59e0b 60%, #b45309 95%);
 }
 
 [data-theme="light"] {
@@ -83,6 +92,15 @@
   --silver-500: #475569;
   --silver-rim: rgba(100, 116, 139, 0.22);
   --silver-gradient: linear-gradient(135deg, #334155 0%, #64748b 50%, #1e293b 100%);
+
+  /* Metallic Copper-Gold (Light Mode) */
+  --copper-light: #fffbeb;
+  --copper-base: #d97706;
+  --copper-deep: #b45309;
+  --copper-dark: #78350f;
+  --copper-glow: rgba(217, 119, 6, 0.18);
+  --copper-rim: rgba(180, 83, 9, 0.3);
+  --copper-gradient: linear-gradient(135deg, #78350f 0%, #b45309 45%, #d97706 90%);
 }
 
 /* ─── Base ─── */
@@ -101,7 +119,7 @@ body {
     sans-serif;
   background:
     radial-gradient(ellipse 90% 50% at 50% -20%, var(--accent-glow), transparent 60%),
-    radial-gradient(ellipse 50% 30% at 95% 0%, rgba(203, 213, 225, 0.05), transparent),
+    radial-gradient(ellipse 50% 30% at 95% 0%, rgba(245, 158, 11, 0.04), transparent),
     var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -110,11 +128,11 @@ body {
 }
 
 ::selection {
-  background: var(--silver-300);
-  color: #0f172a;
+  background: var(--copper-base);
+  color: #000000;
 }
 
-/* ─── Tactile Industrial Fleet & Metallic Silver Utilities ─── */
+/* ─── Tactile Industrial Fleet, Silver & Copper-Gold Utilities ─── */
 .glass-panel {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -152,6 +170,26 @@ body {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
+/* Metallic Copper-Gold Elements */
+.copper-gold-text {
+  background: linear-gradient(135deg, #fffbeb 10%, #fcd34d 30%, #f59e0b 60%, #b45309 95%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.copper-gold-badge {
+  background: linear-gradient(135deg, rgba(254, 243, 199, 0.14) 0%, rgba(217, 119, 6, 0.08) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.38);
+  color: #fde68a;
+  box-shadow: inset 0 1px 0 rgba(254, 243, 199, 0.25);
+}
+
+.copper-gold-rim {
+  border: 1px solid rgba(217, 119, 6, 0.38);
+  box-shadow: inset 0 1px 0 rgba(254, 243, 199, 0.22), 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
 .telemetry-border {
   border: 1px solid var(--border);
   position: relative;
@@ -164,8 +202,8 @@ body {
   right: 0;
   width: 6px;
   height: 6px;
-  border-top: 1.5px solid var(--silver-300);
-  border-right: 1.5px solid var(--silver-300);
+  border-top: 1.5px solid var(--copper-base);
+  border-right: 1.5px solid var(--copper-base);
 }
 
 .gradient-text {
@@ -185,7 +223,7 @@ body {
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, var(--silver-300), transparent 50%, var(--accent));
+  background: linear-gradient(135deg, var(--silver-300), transparent 50%, var(--copper-base));
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
@@ -244,7 +282,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(203, 213, 225, 0.45);
+  background: rgba(245, 158, 11, 0.5);
 }
 ::-webkit-scrollbar-track {
   background: transparent;

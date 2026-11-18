@@ -46,11 +46,26 @@ export function Logo({ className = "", size = 32, glow = false }: LogoProps) {
             <stop offset="100%" stopColor="#0f172a" />
           </linearGradient>
 
+          {/* Radiant Copper-Gold Node Gradient */}
+          <linearGradient id="stocker-grad-copper" x1="16" y1="16" x2="24" y2="25" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#fffbeb" />
+            <stop offset="30%" stopColor="#fcd34d" />
+            <stop offset="65%" stopColor="#f59e0b" />
+            <stop offset="100%" stopColor="#b45309" />
+          </linearGradient>
+
           {/* Metallic Silver Rim Bevel */}
           <linearGradient id="stocker-silver-rim" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#ffffff" stopOpacity="0.6" />
             <stop offset="50%" stopColor="#94a3b8" stopOpacity="0.25" />
             <stop offset="100%" stopColor="#cbd5e1" stopOpacity="0.5" />
+          </linearGradient>
+
+          {/* Copper-Gold Edge Accent */}
+          <linearGradient id="stocker-copper-rim" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#fcd34d" stopOpacity="0.8" />
+            <stop offset="50%" stopColor="#f59e0b" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="#b45309" stopOpacity="0.7" />
           </linearGradient>
 
           <filter id="stocker-shadow" x="-10%" y="-10%" width="120%" height="120%" filterUnits="userSpaceOnUse">
@@ -98,14 +113,18 @@ export function Logo({ className = "", size = 32, glow = false }: LogoProps) {
           fillOpacity="0.55"
         />
 
-        {/* Autonomous Central Silver Node */}
-        <circle cx="20" cy="20.5" r="2.5" fill="#ffffff" stroke="#cbd5e1" strokeWidth="0.75" />
+        {/* Autonomous Central Copper-Gold Node & Spark */}
+        <circle cx="20" cy="20.5" r="3.2" fill="url(#stocker-grad-copper)" stroke="#fcd34d" strokeWidth="0.8" />
         <path
-          d="M20 17V24M16.5 20.5H23.5"
-          stroke="#ffffff"
+          d="M20 16.5V24.5M16 20.5H24"
+          stroke="#fffbeb"
           strokeWidth="1.2"
           strokeLinecap="round"
         />
+        <circle cx="20" cy="20.5" r="1" fill="#ffffff" />
+
+        {/* Copper-Gold Machined Corner Beacon */}
+        <path d="M34 5.5L38.5 10" stroke="#f59e0b" strokeWidth="1.4" strokeLinecap="round" />
       </svg>
     </div>
   );
@@ -116,12 +135,15 @@ export function BrandHeader({ className = "" }: { className?: string }) {
     <div className={`flex items-center gap-3 ${className}`}>
       <Logo size={36} glow />
       <div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <p className="text-[11px] font-bold uppercase tracking-[0.25em] font-mono silver-text">
             Stocker
           </p>
-          <span className="rounded-[4px] border border-slate-300/30 bg-slate-300/10 px-1 py-0.2 text-[9px] font-mono text-slate-200">
+          <span className="silver-badge rounded-[4px] px-1 py-0.2 text-[8.5px] font-mono font-bold tracking-tight">
             SILVER
+          </span>
+          <span className="copper-gold-badge rounded-[4px] px-1 py-0.2 text-[8.5px] font-mono font-bold tracking-tight">
+            COPPER-GOLD
           </span>
         </div>
         <p className="text-sm font-semibold tracking-tight text-[var(--text)]">Autonomous SCM</p>

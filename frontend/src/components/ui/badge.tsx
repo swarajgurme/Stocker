@@ -19,6 +19,10 @@ const badge = cva(
         high: "border-orange-500/30 bg-orange-500/10 text-orange-400",
         medium: "border-amber-500/30 bg-amber-500/10 text-amber-400",
         low: "border-slate-500/30 bg-slate-500/10 text-slate-400",
+        copper:
+          "border-amber-500/40 bg-gradient-to-r from-amber-500/15 to-yellow-600/10 text-amber-300 shadow-[inset_0_1px_0_rgba(254,243,199,0.2)] font-mono",
+        silver:
+          "border-slate-300/35 bg-gradient-to-r from-slate-200/15 to-slate-400/10 text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] font-mono",
       },
     },
     defaultVariants: { tone: "default" },
