@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   Activity,
@@ -89,6 +89,18 @@ export function AppShell() {
 
   const roleLabel = user?.role?.replace(/_/g, " ") ?? "";
 
+  // Global shortcut to toggle AI Copilot (Cmd+J / Ctrl+J)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
+        e.preventDefault();
+        setChatOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
     <div className="flex min-h-screen">
       {/* Desktop sidebar */}
@@ -102,26 +114,6 @@ export function AppShell() {
         <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
           <NavItems />
         </nav>
-        <div className="px-3 pb-2">
-          <button
-            type="button"
-            onClick={() => setChatOpen(true)}
-            className="silver-rim flex w-full items-center justify-between rounded-lg bg-[var(--surface2)] p-2.5 text-xs font-semibold text-[var(--text)] transition-all hover:bg-[var(--surface-hover)] group cursor-pointer"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/30 shadow-xs">
-                <Sparkles className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
-              </div>
-              <div className="text-left">
-                <div className="font-bold text-[11px] font-mono tracking-wider silver-text">AI COPILOT</div>
-                <div className="text-[10px] text-[var(--muted)] font-normal">Autonomous Intelligence</div>
-              </div>
-            </div>
-            <span className="copper-gold-badge rounded px-1.5 py-0.5 text-[9px] font-mono font-bold">
-              ACTIVE
-            </span>
-          </button>
-        </div>
         <div className="border-t border-[var(--border)] p-4">
           <div className="rounded-[var(--radius)] bg-[var(--surface2)] p-3">
             <p className="truncate text-sm font-medium text-[var(--text)]">{user?.email}</p>
@@ -219,14 +211,15 @@ export function AppShell() {
 
             <button
               type="button"
-              onClick={() => setChatOpen(true)}
-              className="copper-gold-rim group flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-all shadow-xs cursor-pointer"
+              onClick={() => setChatOpen((prev) => !prev)}
+              aria-label="Toggle Stocker AI Copilot"
+              className="silver-rim group flex items-center gap-2 rounded-lg bg-[var(--surface2)] px-3 py-1.5 text-xs font-semibold text-[var(--text)] hover:bg-[var(--surface-hover)] transition-all shadow-xs cursor-pointer"
             >
               <Sparkles className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
               <span className="silver-text font-bold">AI Copilot</span>
-              <span className="rounded bg-amber-500/20 border border-amber-500/30 px-1.5 py-0.2 text-[9px] text-amber-300 font-mono font-bold">
-                LIVE
-              </span>
+              <kbd className="hidden lg:inline-flex items-center rounded border border-[var(--border)] bg-[var(--surface)] px-1.5 py-0.5 font-mono text-[9px] text-[var(--muted)]">
+                ⌘J
+              </kbd>
             </button>
           </div>
 
