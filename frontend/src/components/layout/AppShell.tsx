@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { canAccess, routeRoles } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { BrandHeader, Logo } from "@/components/ui/Logo";
+import { ChatbotWidget } from "@/components/chat/ChatbotWidget";
 
 const nav = [
   { to: "/", label: "Executive", icon: Gauge, end: true, roles: routeRoles.executive },
@@ -83,6 +84,7 @@ export function AppShell() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const location = useLocation();
 
   const roleLabel = user?.role?.replace(/_/g, " ") ?? "";
@@ -100,6 +102,26 @@ export function AppShell() {
         <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
           <NavItems />
         </nav>
+        <div className="px-3 pb-2">
+          <button
+            type="button"
+            onClick={() => setChatOpen(true)}
+            className="flex w-full items-center justify-between rounded-xl border border-indigo-500/30 bg-gradient-to-r from-violet-600/10 via-indigo-600/10 to-blue-600/10 p-2.5 text-xs font-semibold text-[var(--text)] transition-all hover:border-indigo-500/50 hover:bg-indigo-500/15 group shadow-xs cursor-pointer"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-xs">
+                <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+              </div>
+              <div className="text-left">
+                <div className="font-bold text-[11px] text-[var(--text)]">AI Copilot</div>
+                <div className="text-[10px] text-[var(--muted)] font-normal">Multilingual Assistant</div>
+              </div>
+            </div>
+            <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
+              Live
+            </span>
+          </button>
+        </div>
         <div className="border-t border-[var(--border)] p-4">
           <div className="rounded-[var(--radius)] bg-[var(--surface2)] p-3">
             <p className="truncate text-sm font-medium text-[var(--text)]">{user?.email}</p>
@@ -180,7 +202,32 @@ export function AppShell() {
               {nav.find((n) => location.pathname === n.to || (n.to !== "/" && location.pathname.startsWith(n.to)))?.label ?? "Stocker"}
             </span>
           </div>
+
+          {/* Desktop AI Copilot Quick Launcher */}
+          <div className="hidden md:flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setChatOpen(true)}
+              className="group flex items-center gap-2 rounded-full border border-indigo-500/30 bg-gradient-to-r from-violet-500/10 via-indigo-500/10 to-blue-500/10 px-3.5 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:border-indigo-500/50 hover:from-violet-500/20 hover:to-blue-500/20 transition-all shadow-xs"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-indigo-500 animate-pulse" />
+              <span>AI Copilot</span>
+              <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.2 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                Online
+              </span>
+            </button>
+          </div>
+
           <div className="flex items-center gap-2 md:hidden">
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              onClick={() => setChatOpen(true)}
+              className="text-xs text-indigo-600 font-semibold flex items-center gap-1"
+            >
+              <Sparkles className="h-3.5 w-3.5" /> AI
+            </Button>
             <Button variant="ghost" size="icon" type="button" onClick={toggleTheme}>
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
@@ -200,6 +247,9 @@ export function AppShell() {
           <Outlet />
         </motion.main>
       </div>
+
+      {/* Floating & Interactive Multilingual AI Assistant */}
+      <ChatbotWidget isOpen={chatOpen} setIsOpen={setChatOpen} />
     </div>
   );
 }

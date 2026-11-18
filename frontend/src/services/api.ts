@@ -367,6 +367,50 @@ export const reportAPI = {
     ),
 };
 
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  provider?: string;
+  model?: string;
+  timestamp: string;
+}
+
+export interface ChatResponse {
+  reply: string;
+  provider: string;
+  model: string;
+  timestamp: string;
+}
+
+export interface ChatStatus {
+  online: boolean;
+  active_provider: string;
+  providers: {
+    gemini: boolean;
+    openai: boolean;
+    groq: boolean;
+    local_semantic: boolean;
+  };
+  supported_languages: string[];
+  system_summary: {
+    total_products: number;
+    total_stores: number;
+    low_stock_count: number;
+    active_transfers: number;
+    procurement_alerts: number;
+  };
+}
+
+export const chatAPI = {
+  sendMessage: (message: string, history?: { role: string; content: string }[]) =>
+    apiRequest<ChatResponse>("/api/chat", {
+      method: "POST",
+      body: JSON.stringify({ message, history }),
+    }),
+  getStatus: () => apiRequest<ChatStatus>("/api/chat/status"),
+};
+
 export async function downloadAuthorizedFile(path: string): Promise<Blob> {
   const token = localStorage.getItem("access_token");
   const res = await fetch(`${API_BASE}${path}`, {

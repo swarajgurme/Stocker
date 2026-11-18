@@ -41,3 +41,6 @@ yarn-error.log*
 
 # Git
 .git/
+
+# Untracked personal / temporary folders
+cute-pink-cat-website/
