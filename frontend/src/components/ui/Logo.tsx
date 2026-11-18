@@ -12,7 +12,7 @@ export function Logo({ className = "", size = 32, glow = false }: LogoProps) {
     >
       {glow && (
         <div
-          className="absolute inset-0 rounded-2xl bg-emerald-500/20 blur-md pointer-events-none"
+          className="absolute inset-0 rounded-2xl bg-slate-300/20 blur-md pointer-events-none"
           style={{ transform: "scale(1.2)" }}
         />
       )}
@@ -31,62 +31,75 @@ export function Logo({ className = "", size = 32, glow = false }: LogoProps) {
             <stop offset="100%" stopColor="#10b981" />
           </linearGradient>
 
-          {/* Deep Spruce Left Face */}
-          <linearGradient id="stocker-grad-left" x1="5" y1="16" x2="20" y2="35" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#059669" />
-            <stop offset="100%" stopColor="#047857" />
+          {/* Liquid Brushed Silver Left Face */}
+          <linearGradient id="stocker-grad-silver" x1="5" y1="16" x2="20" y2="35" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="35%" stopColor="#e2e8f0" />
+            <stop offset="70%" stopColor="#94a3b8" />
+            <stop offset="100%" stopColor="#64748b" />
           </linearGradient>
 
-          {/* Glacier Cyan Right Face */}
-          <linearGradient id="stocker-grad-right" x1="20" y1="16" x2="35" y2="35" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#06b6d4" />
-            <stop offset="100%" stopColor="#0f766e" />
+          {/* Deep Titanium Steel Right Face */}
+          <linearGradient id="stocker-grad-titanium" x1="20" y1="16" x2="35" y2="35" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#475569" />
+            <stop offset="60%" stopColor="#1e293b" />
+            <stop offset="100%" stopColor="#0f172a" />
+          </linearGradient>
+
+          {/* Metallic Silver Rim Bevel */}
+          <linearGradient id="stocker-silver-rim" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.6" />
+            <stop offset="50%" stopColor="#94a3b8" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#cbd5e1" stopOpacity="0.5" />
           </linearGradient>
 
           <filter id="stocker-shadow" x="-10%" y="-10%" width="120%" height="120%" filterUnits="userSpaceOnUse">
-            <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#022c22" floodOpacity="0.4" />
+            <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#022c22" floodOpacity="0.45" />
           </filter>
         </defs>
 
-        {/* Outer Tactile Hexagonal Tile Container */}
+        {/* Machined Metallic Base Tile */}
         <rect
           width="40"
           height="40"
           rx="9"
-          fill="url(#stocker-grad-left)"
-          fillOpacity="0.14"
-          stroke="rgba(52, 211, 153, 0.25)"
-          strokeWidth="1"
+          fill="#0c1816"
+          stroke="url(#stocker-silver-rim)"
+          strokeWidth="1.2"
         />
 
-        {/* Isometric Stock Cube Top Face */}
+        {/* Isometric Stock Cube Top Face (Alpine Emerald) */}
         <path
           d="M20 7L32 13.8L20 20.6L8 13.8L20 7Z"
           fill="url(#stocker-grad-top)"
           filter="url(#stocker-shadow)"
         />
 
-        {/* Isometric Stock Cube Left Face */}
+        {/* Isometric Stock Cube Left Face (Brushed Metallic Silver) */}
         <path
           d="M7.5 15.5L19 22.1V34L7.5 27.4V15.5Z"
-          fill="url(#stocker-grad-left)"
+          fill="url(#stocker-grad-silver)"
+          stroke="rgba(255, 255, 255, 0.4)"
+          strokeWidth="0.5"
         />
 
-        {/* Isometric Stock Cube Right Face */}
+        {/* Isometric Stock Cube Right Face (Deep Titanium Steel) */}
         <path
           d="M21 22.1L32.5 15.5V27.4L21 34V22.1Z"
-          fill="url(#stocker-grad-right)"
+          fill="url(#stocker-grad-titanium)"
+          stroke="rgba(203, 213, 225, 0.2)"
+          strokeWidth="0.5"
         />
 
-        {/* Autonomous Telemetry Pathway */}
+        {/* Autonomous Telemetry Pathway with Silver Sheen */}
         <path
           d="M13 13.5L20 9.5L27 13.5L20 17.5L13 13.5Z"
           fill="#ffffff"
-          fillOpacity="0.4"
+          fillOpacity="0.55"
         />
 
-        {/* Autonomous Central Node */}
-        <circle cx="20" cy="20.5" r="2.5" fill="#ffffff" />
+        {/* Autonomous Central Silver Node */}
+        <circle cx="20" cy="20.5" r="2.5" fill="#ffffff" stroke="#cbd5e1" strokeWidth="0.75" />
         <path
           d="M20 17V24M16.5 20.5H23.5"
           stroke="#ffffff"
@@ -101,14 +114,14 @@ export function Logo({ className = "", size = 32, glow = false }: LogoProps) {
 export function BrandHeader({ className = "" }: { className?: string }) {
   return (
     <div className={`flex items-center gap-3 ${className}`}>
-      <Logo size={34} glow />
+      <Logo size={36} glow />
       <div>
         <div className="flex items-center gap-1.5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--accent)] font-mono">
+          <p className="text-[11px] font-bold uppercase tracking-[0.25em] font-mono silver-text">
             Stocker
           </p>
-          <span className="rounded-[4px] bg-[var(--accent)]/15 px-1 py-0.2 text-[9px] font-mono text-[var(--accent)] border border-[var(--accent)]/30">
-            FLEET
+          <span className="rounded-[4px] border border-slate-300/30 bg-slate-300/10 px-1 py-0.2 text-[9px] font-mono text-slate-200">
+            SILVER
           </span>
         </div>
         <p className="text-sm font-semibold tracking-tight text-[var(--text)]">Autonomous SCM</p>
