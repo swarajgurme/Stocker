@@ -31,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const logout = useCallback(async () => {
+    sessionStorage.removeItem("stocker_splash_shown");
     const token = localStorage.getItem("access_token");
     if (token) {
       try {
@@ -81,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [bootstrap]);
 
   const login = useCallback(async (email: string, password: string) => {
+    sessionStorage.removeItem("stocker_splash_shown");
     const res = await authAPI.login(email, password);
     const d = res.data as Record<string, string>;
     const { access_token, refresh_token, ...rest } = d;
@@ -98,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(
     async (email: string, password: string, fullName?: string) => {
+      sessionStorage.removeItem("stocker_splash_shown");
       const res = await authAPI.register(email, password, fullName);
       const d = res.data as Record<string, string>;
       const { access_token, refresh_token, ...rest } = d;

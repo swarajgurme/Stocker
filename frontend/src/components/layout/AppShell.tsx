@@ -23,6 +23,7 @@ import { canAccess, routeRoles } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 import { BrandHeader, Logo } from "@/components/ui/Logo";
 import { ChatbotWidget } from "@/components/chat/ChatbotWidget";
+import { SplashTransition } from "@/components/ui/SplashTransition";
 
 const nav = [
   { to: "/", label: "Executive", icon: Gauge, end: true, roles: routeRoles.executive },
@@ -103,6 +104,9 @@ export function AppShell() {
 
   return (
     <div className="flex min-h-screen">
+      {/* Cinematic Splash Transition on Login / App Entry */}
+      <SplashTransition />
+
       {/* Desktop sidebar */}
       <aside
         className="glass-panel-strong fixed inset-y-0 left-0 z-40 hidden w-[var(--sidebar-width)] flex-col border-r border-[var(--border)] md:flex"
